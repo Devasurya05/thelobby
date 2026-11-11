@@ -87,3 +87,7 @@ Placeholders like `<bucket>`, `<elastic-ip>` and `<rds-endpoint>` stand for real
 - Put new code live: `git push` on the laptop, then `bash /var/www/thelobby/deploy/release.sh` on the server.
 - Change one setting safely: `bash /var/www/thelobby/deploy/set-env.sh KEY VALUE` (never edit `.env` with `sed -i` by hand: see error 17).
 - Race demo on the live server (throw-away trip only): `cd /var/www/thelobby && sudo -u www-data php artisan demo:race <CODE> --racers=5 --allow-production`. Without the flag it refuses in production (a guard against creating fake members on a real trip); the racers are removed afterwards, their audit rows stay.
+
+## Part 7: The smoke test (proof from the outside)
+
+`php scripts/smoke-test.php <url>` behaves like real people over real HTTPS: creates a throw-away trip, joins five people, fires five simultaneous grabs at one bed (exactly one 200 and four 409s), confirms a bed, checks a confirmed bed cannot be taken, lets a 30-second hold expire, uploads a PDF, opens it through the signed link (60 seconds, not cached, exact bytes, unsigned URL refused, stranger refused), ends the trip and checks the old link is dead. On the live site: all 24 checks passed. It also proves the server's IAM role reaches S3 with no access key on the machine.
