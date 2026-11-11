@@ -29,6 +29,29 @@ class AuditLog extends Model
         static::deleting(fn () => throw new LogicException('Audit logs are append-only.'));
     }
 
+    /**
+     * The one way the app writes to the audit log, so every entry looks the same.
+     * Never put tokens, cookies or file contents in $details.
+     */
+    public static function record(
+        int $tripId,
+        ?int $memberId,
+        string $action,
+        ?string $targetType = null,
+        ?int $targetId = null,
+        array $details = [],
+    ): self {
+        return self::create([
+            'trip_id' => $tripId,
+            'member_id' => $memberId,
+            'action' => $action,
+            'target_type' => $targetType,
+            'target_id' => $targetId,
+            'details' => $details === [] ? null : $details,
+            'ip_address' => request()->ip(),
+        ]);
+    }
+
     public function trip(): BelongsTo
     {
         return $this->belongsTo(Trip::class);

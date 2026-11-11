@@ -20,7 +20,7 @@ Design principles: no double booking, temporary holds, one source of truth, righ
 - Not installed yet: AWS CLI (not needed, console is fine).
 
 ## Structure (current)
-Standard Laravel 13 skeleton plus `scripts/start-mysql.ps1`. Models in `app/Models` (Trip, Member, Room, Bed, VaultFile, AuditLog, ErrorLog); migrations in `database/migrations` (2026_11_11_00000N_*). No controllers/routes/services yet.
+Standard Laravel 13 skeleton plus `scripts/start-mysql.ps1`. Models in `app/Models` (Trip, Member, Room, Bed, VaultFile, AuditLog, ErrorLog); migrations in `database/migrations` (2026_11_11_00000N_*). Also: `app/Support` (MemberToken, RoomListParser), `app/Http/Middleware/ResolveMember.php`, controllers Home/Trip/Join/Lobby, Form Requests CreateTripRequest/JoinTripRequest, views in `resources/views` (layouts/app, home, join, lobby), CSS in `public/css/app.css`. Routes: `/` home, `POST /trips`, `GET /join/{code?}`, `POST /join`, `GET /t/{code}` (lobby, behind `trip.member`). No BedService or JSON state endpoint yet.
 
 ## Decisions log (append only)
 - 2026-11-11: Name is "The Lobby". Repo name `thelobby`.
@@ -29,4 +29,7 @@ Standard Laravel 13 skeleton plus `scripts/start-mysql.ps1`. Models in `app/Mode
 - 2026-11-11: MySQL runs as a hidden background process bound to 127.0.0.1 instead of a Windows service (service install needs admin).
 - 2026-11-11: `beds.taken_by_member_id` is UNIQUE so the database itself enforces one bed per person. Members are soft-removed (`removed_at`), never deleted.
 - 2026-11-11: `audit_logs.trip_id` uses restrictOnDelete and the AuditLog model throws on update/delete (append-only). `error_logs` has no foreign keys on purpose so logging an error can never fail.
+- 2026-11-11: Auth = random 40-char token in an encrypted HttpOnly, SameSite=Lax cookie named `lobby_{code}` with path `/t/{code}`; DB stores only sha256(token). Middleware looks up by (trip from URL, token hash), so a token from one trip cannot open another. Removed members get 403 on the next request.
+- 2026-11-11: Rooms/beds are entered as plain text, one room per line (`Room 1: Window, Door`); limits 60 rooms, 10 beds/room, 200 beds total. Member names are unique per trip (case-insensitive, app-level check). Max 200 members per trip. POST /trips and /join throttled to 10/min/IP.
+- 2026-11-11: Tests run on real MySQL (`thelobby_test`), not SQLite, because the locking behaviour must be real.
 - 2026-11-11: Models use `$fillable` (mass-assignment protection); `Member::$hidden` includes token_hash.

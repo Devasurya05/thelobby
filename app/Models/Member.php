@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Member extends Model
 {
     public const ROLE_ORGANISER = 'organiser';
+
     public const ROLE_MEMBER = 'member';
+
     public const ROLE_VIEWER = 'viewer';
 
     protected $fillable = ['trip_id', 'name', 'role', 'token_hash'];

@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Bed extends Model
 {
     public const FREE = 'free';
+
     public const HELD = 'held';
+
     public const TAKEN = 'taken';
 
     protected $fillable = ['trip_id', 'room_id', 'label'];
