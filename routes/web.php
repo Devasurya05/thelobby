@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BedController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JoinController;
 use App\Http\Controllers\LobbyController;
@@ -23,4 +24,14 @@ Route::middleware('trip.member')
     ->where(['code' => $code])
     ->group(function () {
         Route::get('/', [LobbyController::class, 'show'])->name('lobby');
+
+        // JSON the lobby screen polls every ~2 seconds.
+        Route::get('/state', [LobbyController::class, 'state'])->name('lobby.state');
+
+        // Bed actions. POST (never GET) so they can't be triggered by a link or an image tag.
+        Route::middleware('throttle:lobby-actions')->group(function () {
+            Route::post('/beds/{bedId}/grab', [BedController::class, 'grab'])->whereNumber('bedId')->name('beds.grab');
+            Route::post('/beds/{bedId}/confirm', [BedController::class, 'confirm'])->whereNumber('bedId')->name('beds.confirm');
+            Route::post('/beds/{bedId}/release', [BedController::class, 'release'])->whereNumber('bedId')->name('beds.release');
+        });
     });

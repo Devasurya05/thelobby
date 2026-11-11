@@ -70,3 +70,35 @@ button.block, .btn.block { width: 100%; text-align: center; }
 .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 700; background: #e8eefc; color: var(--brand); }
 
 .sharebox { word-break: break-all; background: var(--bg); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; font-family: ui-monospace, Consolas, monospace; font-size: .9rem; }
+
+/* ---- Lobby ---- */
+/* A floating toast: it must NOT push the page down when it appears or disappears, or buttons would jump away from a finger mid-tap. */
+.notice { position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 608px; margin: 0 auto; z-index: 10; padding: 12px 14px; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,.18); }
+.notice[hidden] { display: none; }
+.notice.ok { background: #e6f5ec; border: 1px solid #a9dcbc; color: #1d6b3d; }
+.notice.error { background: #fdecec; border: 1px solid #f3b6b6; color: #8a1f1f; }
+
+.me-banner { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 12px 0 4px; font-weight: 600; }
+.me-banner.holding { border-color: var(--held); background: #fff8e0; }
+.me-banner.has-bed { border-color: var(--free); background: #e6f5ec; }
+.me-banner.ended { border-color: var(--taken); background: #fdecec; }
+.summary { margin: 0 0 8px; }
+
+.room { margin: 20px 0; }
+.room h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.beds { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 480px) { .beds { grid-template-columns: 1fr 1fr; } }
+
+/* Colour AND words (Free / Held / Taken) so colour-blind people are not left guessing. */
+.bed { background: #fff; border: 1px solid var(--line); border-left: 8px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.bed.free { border-left-color: var(--free); }
+.bed.held { border-left-color: var(--held); background: #fffbea; }
+.bed.taken { border-left-color: var(--taken); background: #fdf1f1; }
+.bed.mine { outline: 3px solid var(--brand); }
+.bed-label { font-weight: 700; }
+.bed-status { color: var(--muted); font-size: .95rem; }
+.bed-actions { display: flex; gap: 8px; }
+.bed-actions button { flex: 1; margin-top: 10px; }
+button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+button:disabled { opacity: .55; cursor: wait; }
+.countdown { font-variant-numeric: tabular-nums; }

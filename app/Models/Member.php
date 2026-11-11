@@ -38,6 +38,12 @@ class Member extends Model
         return $this->role === self::ROLE_ORGANISER;
     }
 
+    // Viewers can watch the lobby but not pick beds.
+    public function canPickBeds(): bool
+    {
+        return $this->role !== self::ROLE_VIEWER;
+    }
+
     // Organisers and members may upload; viewers may only look.
     public function canUpload(): bool
     {
