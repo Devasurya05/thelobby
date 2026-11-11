@@ -170,7 +170,13 @@
                     window.location.href = joinUrl;   // cookie gone: join again
                 } else if (xhr.status === 403) {
                     stopped = true;
+                    forgetTrip();
                     $('#me-banner').text('You have been removed from this trip.');
+                } else if (xhr.status === 404) {
+                    // The trip is gone (deleted): polling again would only repeat the error forever.
+                    stopped = true;
+                    forgetTrip();
+                    $('#me-banner').text('This trip no longer exists.');
                 } else {
                     notice('Connection problem. Trying again...', 'error');
                 }
@@ -213,6 +219,37 @@
                 $('#lobby button').prop('disabled', false);
             });
     });
+
+    // ---- "your trips on this device" -------------------------------------------------------------
+    // The login cookie only travels with /t/CODE pages, so the home page cannot see it. To let the
+    // home page offer a "back to your trip" shortcut we keep a tiny list in this browser's
+    // localStorage: trip code + trip name + your name. NO token, nothing secret. Losing it is harmless.
+    var STORE_KEY = 'lobby_trips';
+
+    function readTrips() {
+        try {
+            var list = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+            return $.isArray(list) ? list : [];
+        } catch (e) { return []; }
+    }
+
+    function writeTrips(list) {
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(list.slice(0, 10))); } catch (e) { /* private mode: ignore */ }
+    }
+
+    function rememberTrip() {
+        var code = String($root.data('trip-code'));
+        var others = $.grep(readTrips(), function (t) { return t.code !== code; });
+        // Newest first, so the trip you just opened is at the top of the list.
+        writeTrips([{ code: code, name: String($root.data('trip-name')), me: String($root.data('my-name')) }].concat(others));
+    }
+
+    function forgetTrip() {
+        var code = String($root.data('trip-code'));
+        writeTrips($.grep(readTrips(), function (t) { return t.code !== code; }));
+    }
+
+    rememberTrip();
 
     // ---- invite link ---------------------------------------------------------------------------
 

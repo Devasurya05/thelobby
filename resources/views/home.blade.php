@@ -4,8 +4,15 @@
     <h1>Pick your bed. No clashes.</h1>
     <p class="muted">Group trips made simple: choose your room in a live lobby, then share tickets in a private vault that deletes itself when the trip ends.</p>
 
-    <section class="card">
+    {{-- Filled in by public/js/home.js from this browser's own list; stays hidden if there is nothing. --}}
+    <section id="my-trips" class="card my-trips" hidden>
+        <h2>Your trips on this device</h2>
+        <ul id="my-trips-list" class="trip-list"></ul>
+    </section>
+
+    <section class="card join-card">
         <h2>Join a trip</h2>
+        <p class="muted small">Got a code or invite link from a friend?</p>
         <form method="POST" action="{{ route('join.store') }}">
             @csrf
             <label for="join-code">Trip code</label>
@@ -20,7 +27,9 @@
         </form>
     </section>
 
-    <section class="card">
+    <p class="divider"><span>or organise your own</span></p>
+
+    <section class="card create-card">
         <h2>Create a trip</h2>
         <form method="POST" action="{{ route('trips.store') }}">
             @csrf
@@ -49,3 +58,7 @@
         </form>
     </section>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/home.js') }}"></script>
+@endpush

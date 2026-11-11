@@ -101,6 +101,17 @@ button.block, .btn.block { width: 100%; text-align: center; }
 .bed-actions button { flex: 1; margin-top: 10px; }
 button.secondary, .btn.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
 
+/* ---- Home page: make "join" and "create" look like two different things ---- */
+.card[hidden] { display: none; }
+.join-card { background: #f3f7ff; border-left: 4px solid var(--brand); }
+.create-card { border-top: 4px solid var(--brand); }
+.divider { display: flex; align-items: center; gap: 12px; margin: 24px 0 0; color: var(--muted); font-size: .875rem; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.trip-list { list-style: none; margin: 0; padding: 0; }
+.trip-list li { padding: 10px 0; border-top: 1px solid var(--line); }
+.trip-list li:first-child { border-top: 0; }
+.trip-list a { font-weight: 700; }
+
 /* ---- Invite link ---- */
 input.sharebox { font-family: ui-monospace, Consolas, monospace; font-size: .9rem; }
 .invite-actions { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -15,6 +15,9 @@
          data-state-url="{{ route('lobby.state', $trip->join_code) }}"
          data-action-base="{{ url('/t/'.$trip->join_code.'/beds') }}/"
          data-join-url="{{ route('join.show', $trip->join_code) }}"
+         data-trip-code="{{ $trip->join_code }}"
+         data-trip-name="{{ $trip->name }}"
+         data-my-name="{{ $member->name }}"
          data-poll-ms="{{ config('lobby.poll_ms') }}">
 
         <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>

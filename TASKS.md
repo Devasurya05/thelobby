@@ -8,7 +8,7 @@
 - [x] 4. Lobby: state endpoint, grab, confirm, release, expiry command, audit log, jQuery UI (34 tests pass; verified with real concurrent processes and in a browser)
 - [x] 5. `demo:race` command (37 tests pass; lobby tests in tests/Feature/LobbyTest.php, race command tests in tests/Feature/DemoRaceTest.php)
 - [x] 5a. Error logging (daily log + error_logs table + /admin/errors with ADMIN_KEY + friendly error pages), audit gaps closed (rate_limited, action_refused, release_rejected), invite link (copy / WhatsApp / share) instead of QR. 49 tests pass.
-- [ ] 5b. Local phone test on same Wi-Fi (`php artisan serve --host=0.0.0.0`, firewall, `schedule:work`)
+- [x] 5b. Local phone test on same Wi-Fi: PASSED (user confirmed: two devices, grab/confirm/expire/race all fine). Firewall rule "The Lobby dev (port 8000)" was added by the user; remove it when not testing (see log). on same Wi-Fi (`php artisan serve --host=0.0.0.0`, firewall, `schedule:work`)
 - [ ] 6. AWS: Free-plan account, budget alert, private encrypted S3 bucket + lifecycle rule, IAM user for local dev
 - [ ] 7. Vault: upload, 60s pre-signed links, roles, remove member, End trip now + purge, tests
 - [ ] 8. Deploy: RDS, EC2 + IAM role, Nginx/PHP-FPM, cron, migrate, test demo live
@@ -105,3 +105,15 @@ Problems and fixes:
 - The embedded browser pane blocks clipboard access, so only the fallback message path of Copy link was seen. A real tap on a real phone/browser is still to be confirmed during the phone test.
 Next:
 - 5b phone test on Wi-Fi (also confirm Copy link and WhatsApp on the phone), Members page, Audit log page, then AWS (step 6) and the vault (step 7).
+
+### 2026-11-11 (session 1, step 5b: phone test + small fixes)
+Done:
+- User ran the phone test on Wi-Fi (scoped Windows firewall rule: port 8000, Public profile, local subnet only; `php artisan serve --host=0.0.0.0`; `schedule:work`): everything worked.
+- "Not logged in after closing and reopening": the login cookie lasts 30 days, so closing the browser does not log you out. The real gap: the cookie is scoped to /t/CODE, so the HOME page cannot see it and gives no way back into a trip (also, localhost and the LAN IP are different sites with separate cookies). Fix: lobby.js keeps a small list in localStorage (trip code, trip name, your name; NO token) and the home page shows "Your trips on this device" (public/js/home.js, plain JS, textContent only, codes validated with a regex).
+- Lobby poll now stops on 404 (trip deleted) instead of retrying forever; 403 and 404 also remove the trip from the local list.
+- Home page: join card and create card now look different (tinted card with left accent vs top accent, plus an "or organise your own" divider).
+- Added scripts/stop-mysql.ps1 (clean mysqladmin shutdown; root password read from the file outside the repo, passed through MYSQL_PWD, never on the command line).
+- Verified in the browser: trip appears on the home page, a trip name containing HTML is shown as plain text, clicking it opens the lobby logged in. 49 tests pass, Pint clean.
+Cleanup advice given: Ctrl+C in the server and scheduler windows; remove the firewall rule with `Remove-NetFirewallRule -DisplayName "The Lobby dev (port 8000)"` in an Administrator PowerShell; set HOLD_SECONDS back to 120 in .env for normal use.
+Next:
+- Members page + Audit log page, then AWS (step 6) and the vault (step 7).
