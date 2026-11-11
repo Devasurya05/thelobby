@@ -10,7 +10,7 @@
 - [x] 5a. Error logging (daily log + error_logs table + /admin/errors with ADMIN_KEY + friendly error pages), audit gaps closed (rate_limited, action_refused, release_rejected), invite link (copy / WhatsApp / share) instead of QR. 49 tests pass.
 - [x] 5b. Local phone test on same Wi-Fi: PASSED (user confirmed: two devices, grab/confirm/expire/race all fine). Firewall rule "The Lobby dev (port 8000)" was added by the user; remove it when not testing (see log). on same Wi-Fi (`php artisan serve --host=0.0.0.0`, firewall, `schedule:work`)
 - [x] 5c. Members page (organiser: list, change role member/viewer, remove with bed release) + Audit log page (organiser, readable, newest first, "older" paging). 58 tests pass.
-- [ ] 6. AWS: Free-plan account, budget alert, private encrypted S3 bucket + lifecycle rule, IAM user for local dev
+- [x] 6. DONE 2026-11-11, real bucket proven by a 9-check self-test (see session log "step 6 finished"). Original notes: (account created, Free plan confirmed ($100 credits, ends 2027-05-11), region = Mumbai. DONE by user: root MFA, zero-spend budget, `lobby-admin` IAM user with MFA, stage C private S3 bucket in ap-south-1 (Block Public Access on, ACLs off, versioning off, SSE-S3, HTTPS-only bucket policy, lifecycle rule: expire `trips/` after 30 days + abort incomplete multipart uploads after 1 day; known limit: 30 days counts from upload, not trip end). NEXT: stage D local-dev IAM user `lobby-local-dev` (policy limited to this bucket's `trips/` prefix, keys only in .env), then install `league/flysystem-aws-s3-v3` (ask the user first) and test) AWS: Free-plan account, budget alert, private encrypted S3 bucket + lifecycle rule, IAM user for local dev
 - [ ] 7. Vault: upload, 60s pre-signed links, roles, remove member, End trip now + purge, tests
 - [ ] 8. Deploy: RDS, EC2 + IAM role, Nginx/PHP-FPM, cron, migrate, test demo live
 - [ ] 9. README, docs/STUDY_GUIDE.md, PROJECT.md, TASKS.md final
@@ -129,3 +129,24 @@ Problems and fixes:
 - JSON content of `details` does not keep key order: compare with assertEquals, not assertSame.
 Next:
 - Step 6: AWS (the user does the console clicks; I give exact steps and check free-plan eligibility first), then step 7 the vault.
+
+### 2026-11-11 (session 1, step 6: AWS stages A-D)
+Done:
+- User created the AWS account (Free plan, $100 credits, ends 2027-05-11, region Mumbai ap-south-1), root MFA, zero-spend budget, IAM user `lobby-admin` (AdministratorAccess, MFA, console only), private S3 bucket (Block Public Access on, ACLs off, versioning off, SSE-S3, HTTPS-only bucket policy, lifecycle rule on `trips/` 30 days), IAM policy `thelobby-vault-access` (Put/Get/Delete/AbortMultipart on `trips/*` + ListBucket with prefix `trips/*`), IAM user `lobby-local-dev` (no console, one access key, policy above). Keys only in the local `.env` (shape-checked, values never read).
+- Installed `league/flysystem-aws-s3-v3` ^3.0 (resolved 3.35.3; aws-sdk-php 3.403.3). `config/filesystems.php` s3 disk now has `throw => true` so failures are never silent.
+Problems and fixes:
+- `composer require pkg "^3.0"` in PowerShell: composer.bat swallows the `^` and pinned exactly 3.0.0 (the oldest). Fixed by editing composer.json to `^3.0` and `composer update league/flysystem-aws-s3-v3 --with-dependencies`. In future, edit composer.json by hand or double the caret.
+- First real bucket self-test FAILED: `cURL error 60: unable to get local issuer certificate`. Windows PHP has no CA certificate bundle (`curl.cainfo` and `openssl.cafile` are empty). Needs the Mozilla CA bundle (cacert.pem from curl.se), checksum-verified, and two php.ini lines. Waiting for the user's OK to download it. The two "denied" checks in that run were false passes (they failed on SSL too), so nothing is proven yet. EC2 will not have this problem.
+Next:
+- Get the CA bundle (with user OK), re-run the self-test (upload, read, 60s link, plain URL refused, expired link dead, write outside `trips/` denied, list root denied, delete), then stage 7 the vault.
+
+### 2026-11-11 (session 1, step 6 finished: real bucket proven)
+Done:
+- User approved the download. Fetched the Mozilla CA bundle (`cacert.pem`, 200,116 bytes) from curl.se into its own folder outside the repo (`tools\php-certs`), sha256 matched the value curl.se publishes. Set `curl.cainfo` and `openssl.cafile` in the winget PHP's php.ini (machine setup, not part of the repo).
+- Re-ran the real-bucket self-test (a throwaway script outside the repo): ALL 9 CHECKS PASSED. Upload to `trips/`, read back, 60-second pre-signed link returns the file (HTTP 200), plain URL without signature refused (403, proves the bucket is private), link with 3-second life is dead after 6 seconds (403), write outside `trips/` denied, listing the bucket root denied, delete works, file really gone. Both "denied" checks were re-checked and fail with a genuine `AccessDenied` from AWS (not a connection error).
+- Full suite: 58 tests pass. Pint clean on app, tests, config, routes.
+- User asked for a plain-language explanation of AWS and every step (account, Free plan, MFA, budget, IAM admin vs local-dev user, bucket settings, policies, access key, pre-signed links, why EC2 uses a role). Given in chat; to be written into docs/STUDY_GUIDE.md in step 9.
+Uncommitted for the user to commit: composer.json, composer.lock, config/filesystems.php, PROJECT.md, TASKS.md. Suggested message: "Add S3 adapter and s3 disk config (throw on failure)". Before committing run `git status` and confirm `.env`, `CLAUDE.md` and `docs/PROJECT_BRIEF.md` are NOT listed.
+Next:
+- Step 7, the vault: upload (HEIC handling, size/type limits), 60s pre-signed links, roles (organiser: upload/view/delete/remove/roles/end trip; member: upload+view; viewer: view only), End trip now + scheduled purge that deletes S3 files but keeps the audit log, tests with `Storage::fake`.
+- Later step 8: on EC2 use an IAM instance role (no keys) and delete the `lobby-local-dev` access key at teardown.
