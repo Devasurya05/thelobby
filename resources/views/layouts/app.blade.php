@@ -33,8 +33,8 @@
                     @endif
                 @else
                     <a href="{{ url('/') }}#how">How it works</a>
-                    <a href="{{ url('/') }}#start">Create a trip</a>
-                    <a href="{{ route('join.show') }}" @if (request()->routeIs('join.show')) aria-current="page" @endif>Join a trip</a>
+                    <a href="{{ url('/') }}#create">Create a trip</a>
+                    <a href="{{ url('/') }}#join">Join a trip</a>
                 @endif
             </nav>
         </div>

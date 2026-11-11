@@ -132,3 +132,14 @@ A new "Plan" tab on every trip: where to be and when (a stay, a flight, tickets,
 ### Errors
 21. Symptom: one of my new tests failed ("2 is identical to 1") for the injection check. Cause: the test counted the text `BEGIN:VEVENT` anywhere in the file, but the escaped title legitimately contains those characters inside the SUMMARY line. Fix: the test now checks that exactly one LINE is a real `BEGIN:VEVENT` (and one `END:VEVENT`). Lesson: when testing for injection, look at structure (whole lines), not at substrings.
 - Suite: 103 passed. Checked in a browser at phone width: no overflow; the real downloaded file has the right dates, escaping and headers.
+
+## Part 10: Lobby as the trip's main page, quieter invite, separate Create and Join (2026-11-11 late night)
+
+### Lobby page ("Rooms") now shows the trip at a glance
+- Top of the page: "You have joined this trip", the trip name, your name and role, then three lines: When (trip dates, with "Add to calendar" and "Google Calendar"), Where (the place and address of the FIRST STAY on the Plan, with "Open in maps"), Plan (how many items, with "See the full plan"). The bed lobby itself is unchanged below it.
+- Why the place comes from the Plan: there is no separate "place" field on a trip. The Plan is the one source of truth, so nothing can get out of step, and the booking connection will fill the same place later. If there is no stay yet the organiser sees "Add the place on the plan"; members see "The organiser has not added the place yet".
+- Bottom of the page, in this order: a Vault block (medium size), then Invite people (deliberately smaller and quieter, with a hairline above it), then a last row of links (Plan, Vault, and People and Activity for the organiser). The Vault link stays in the top menu too.
+- Code: `LobbyController::show` looks up the stay and builds the links (`PlanLinks`); view `lobby.blade.php`; CSS `.facts`, `.invite`, `.end-links`. 3 new tests (106 in total): shows the stay's place not an earlier flight's airport; empty state wording per role; order vault, invite, end links.
+
+### Home page: Create and Join are separate
+- Before: "Create a trip" scrolled to an area with Create and Join side by side, and "Join" opened a different page. Now they are two separate sections, one under the other, each with its own anchor (`#create`, `#join`). The two big buttons, the menu and the footer all point to their own section. Checked at phone width: Create lands at its heading, Join lands on its form, nothing sits side by side. `/join/CODE` (invite links) still opens the standalone join page.

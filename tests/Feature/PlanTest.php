@@ -337,6 +337,52 @@ class PlanTest extends TestCase
         $this->assertStringContainsString('location=Hotel%20Sunrise%2C%20Candolim%2C%20Goa', PlanLinks::googleCalendar($timed));
     }
 
+    // ---- the lobby page shows the trip at a glance ---------------------------------------------------
+
+    public function test_the_lobby_shows_when_where_and_map_from_the_first_stay(): void
+    {
+        $trip = $this->makeTrip();
+        [, $token] = $this->makeMember($trip, 'Mia');
+        $this->addItem($trip, ['kind' => 'flight', 'title' => 'Flight', 'place' => 'Goa airport', 'address' => null, 'starts_on' => '2026-12-11']);
+        $this->addItem($trip);   // the stay: Hotel Sunrise, Candolim, Goa
+
+        $page = $this->as($trip, $token)->get($this->url($trip, ''))->assertOk();
+
+        $page->assertSee('You have joined this trip')
+            ->assertSee('Sat 12 Dec to Tue 15 Dec 2026')
+            ->assertSee('Hotel Sunrise, Candolim, Goa')           // the stay, not the earlier flight's airport
+            ->assertDontSee('Goa airport')
+            ->assertSee('query=Hotel%20Sunrise%2C%20Candolim%2C%20Goa', false)
+            ->assertSee('Add to calendar')
+            ->assertSee(route('plan.calendar', $trip->join_code), false)
+            ->assertSee('2 items planned');
+    }
+
+    public function test_the_lobby_says_when_no_place_is_set_and_only_the_organiser_gets_the_nudge(): void
+    {
+        $trip = $this->makeTrip();
+        [, $org] = $this->makeMember($trip, 'Olga', Member::ROLE_ORGANISER);
+        [, $member] = $this->makeMember($trip, 'Mia');
+
+        $this->as($trip, $org)->get($this->url($trip, ''))->assertOk()->assertSee('Add the place on the plan')->assertSee('Nothing planned yet');
+        $this->as($trip, $member)->get($this->url($trip, ''))->assertOk()->assertSee('The organiser has not added the place yet')->assertDontSee('Add the place on the plan');
+    }
+
+    public function test_the_lobby_has_the_vault_before_the_small_invite_section_and_vault_again_at_the_end(): void
+    {
+        $trip = $this->makeTrip();
+        [, $token] = $this->makeMember($trip, 'Mia');
+
+        $html = $this->as($trip, $token)->get($this->url($trip, ''))->assertOk()->getContent();
+
+        $vault = strpos($html, 'id="vault-title"');
+        $invite = strpos($html, 'id="invite-title"');
+        $end = strpos($html, 'class="end-links"');
+        $this->assertNotFalse($vault);
+        $this->assertTrue($vault < $invite && $invite < $end, 'order must be vault, invite, end links');
+        $this->assertStringContainsString('Vault</a>', substr($html, $end));
+    }
+
     public function test_the_plan_page_shows_map_links_and_escapes_user_text(): void
     {
         $trip = $this->makeTrip();

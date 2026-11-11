@@ -27,5 +27,5 @@
         <div class="actions"><button type="submit">Join</button></div>
     </form>
 
-    <p class="muted" style="margin-top: 32px">Want to organise your own trip? <a href="{{ url('/') }}#start">Create one</a>.</p>
+    <p class="muted" style="margin-top: 32px">Want to organise your own trip? <a href="{{ url('/') }}#create">Create one</a>.</p>
 @endsection

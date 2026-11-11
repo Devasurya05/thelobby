@@ -211,3 +211,8 @@ User must commit and push `deploy/` (and this file) before the server can clone 
 - Done: new Plan tab (itinerary items), `.ics` calendar downloads (trip dates + items, or one item), Google Calendar links, "Open in maps" links, organiser-only add/remove with audit rows, 19 new tests (suite 103 passed, Pint clean). See docs/BUILD_LOG.md Part 9. Migration `2026_11_11_000008` must run on the server: `release.sh` does it (`migrate --force`).
 - NOT yet live: user must commit, push, run `bash /var/www/thelobby/deploy/release.sh` on the server, then `php scripts\smoke-test.php <site> --quick`.
 - Next: fake booking sites (hotel + flight) with provider adapters and a signed webhook that creates plan items and rooms (fallback: import by booking reference). Rule: a booking change that would remove a bed someone holds is not applied silently; warn the organiser. Then README + docs/STUDY_GUIDE.md, friends test, Saturday freeze, Sunday rehearsal, Monday smoke check.
+
+### 2026-11-11 (session 1, late night: lobby page as the main page, separate Create/Join)
+- Done: lobby shows When/Where/Plan at a glance (place = first stay on the plan, map link, calendar links); Vault block above a smaller Invite section; end-of-page link row; home page has separate `#create` and `#join` sections and all links point to them. 106 tests pass, Pint clean. Details in docs/BUILD_LOG.md Part 10.
+- NOT yet live: commit, push, `bash /var/www/thelobby/deploy/release.sh` on the server, `php scripts\smoke-test.php <site> --quick`.
+- Next: fake booking sites (hotel + flight), adapters, signed webhook (fallback: import by reference); then README + docs/STUDY_GUIDE.md, friends test, Saturday freeze, Sunday rehearsal, Monday smoke check.

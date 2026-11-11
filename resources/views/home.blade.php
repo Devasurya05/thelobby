@@ -7,8 +7,8 @@
         <h1>Pick your bed.<br>No clashes.</h1>
         <p class="lead">Plan a group trip together. Everyone picks a bed in a live lobby, and tickets and passports go in a private vault that deletes itself when the trip ends.</p>
         <div class="actions">
-            <a class="btn" href="#start">Create a trip</a>
-            <a class="btn secondary" href="{{ route('join.show') }}">Join with a code</a>
+            <a class="btn" href="#create">Create a trip</a>
+            <a class="btn secondary" href="#join">Join with a code</a>
         </div>
     </section>
 
@@ -60,11 +60,11 @@
         </div>
     </section>
 
-    <div class="block start" id="start">
-        <section aria-labelledby="create-title">
-            <h2 id="create-title">Create a trip</h2>
-            <p class="muted">You will be the organiser.</p>
-            <form method="POST" action="{{ route('trips.store') }}">
+    {{-- Two separate sections, one under the other, each with its own anchor, so "Create" and "Join" each land on one thing. --}}
+    <section class="block" id="create" aria-labelledby="create-title">
+        <h2 id="create-title">Create a trip</h2>
+        <p class="muted">You will be the organiser.</p>
+        <form method="POST" action="{{ route('trips.store') }}" class="measure">
                 @csrf
                 <label for="trip-name">Trip name</label>
                 <input id="trip-name" type="text" name="trip_name" value="{{ old('trip_name') }}" maxlength="100" placeholder="Goa villa weekend" required>
@@ -89,26 +89,25 @@
                 @error('rooms') <p class="field-error">{{ $message }}</p> @enderror
 
                 <div class="actions"><button type="submit">Create trip</button></div>
-            </form>
-        </section>
+        </form>
+    </section>
 
-        <section aria-labelledby="join-title">
-            <h2 id="join-title">Join a trip</h2>
-            <p class="muted">Got a code or an invite link from a friend?</p>
-            <form method="POST" action="{{ route('join.store') }}">
-                @csrf
-                <label for="join-code">Trip code</label>
-                <input id="join-code" class="code" type="text" name="code" value="{{ old('code') }}" maxlength="8" autocomplete="off" required>
-                @error('code') <p class="field-error">{{ $message }}</p> @enderror
+    <section class="block" id="join" aria-labelledby="join-title">
+        <h2 id="join-title">Join a trip</h2>
+        <p class="muted">Got a code or an invite link from a friend?</p>
+        <form method="POST" action="{{ route('join.store') }}" class="measure">
+            @csrf
+            <label for="join-code">Trip code</label>
+            <input id="join-code" class="code" type="text" name="code" value="{{ old('code') }}" maxlength="8" autocomplete="off" required>
+            @error('code') <p class="field-error">{{ $message }}</p> @enderror
 
-                <label for="join-name">Your name</label>
-                <input id="join-name" type="text" name="name" value="{{ old('name') }}" maxlength="60" autocomplete="name" required>
-                @error('name') <p class="field-error">{{ $message }}</p> @enderror
+            <label for="join-name">Your name</label>
+            <input id="join-name" type="text" name="name" value="{{ old('name') }}" maxlength="60" autocomplete="name" required>
+            @error('name') <p class="field-error">{{ $message }}</p> @enderror
 
-                <div class="actions"><button type="submit">Join</button></div>
-            </form>
-        </section>
-    </div>
+            <div class="actions"><button type="submit">Join</button></div>
+        </form>
+    </section>
 @endsection
 
 @push('scripts')
