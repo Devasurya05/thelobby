@@ -74,3 +74,16 @@ Placeholders like `<bucket>`, `<elastic-ip>` and `<rds-endpoint>` stand for real
 8. `curl -fsSLO .../deploy/setup-server.sh` then `bash setup-server.sh <repo-url> <bucket> http://<elastic-ip>`.
 9. `bash /var/www/thelobby/deploy/create-db-user.sh <rds-endpoint>` (master username and hidden password; creates a limited `thelobby` user with a generated password written only into the server's `.env`).
 10. `bash /var/www/thelobby/deploy/release.sh` (git pull, composer, migrate, cache config/routes/views).
+
+## Part 5: HTTPS and the free name
+
+1. DuckDNS (free dynamic DNS): sign in (GitHub), pass the CAPTCHA (a human step), add a sub-domain, set its IP to the Elastic IP. The account token is never shared or stored; it is only needed to *change* the record, and an Elastic IP does not change.
+2. Check the name from the laptop: `nslookup <name>.duckdns.org` must show the Elastic IP.
+3. `bash deploy/release.sh` (pulls the new script), then `bash deploy/enable-https.sh <name>.duckdns.org <email>`. It checks the name points at the server, asks you to accept the Let's Encrypt terms by typing `yes`, installs certbot, tells Nginx the site's name, gets the certificate (HTTP-01 challenge over port 80, which is why port 80 stays open), redirects HTTP to HTTPS, sets `APP_URL=https://...` and `SESSION_SECURE_COOKIE=true`.
+4. Checked from outside: HTTP answers `301` to HTTPS; the certificate is trusted (issuer Let's Encrypt, about 90 days, renewed automatically by a systemd timer); cookies carry `secure`, `HttpOnly`, `SameSite=Lax`; `/.env`, `/.git/config`, `/vendor/...`, `/artisan`, logs and a stray `.php` file are not reachable (403/404); `/admin/errors` redirects strangers to the login.
+
+## Part 6: Operating the live server
+
+- Put new code live: `git push` on the laptop, then `bash /var/www/thelobby/deploy/release.sh` on the server.
+- Change one setting safely: `bash /var/www/thelobby/deploy/set-env.sh KEY VALUE` (never edit `.env` with `sed -i` by hand: see error 17).
+- Race demo on the live server (throw-away trip only): `cd /var/www/thelobby && sudo -u www-data php artisan demo:race <CODE> --racers=5 --allow-production`. Without the flag it refuses in production (a guard against creating fake members on a real trip); the racers are removed afterwards, their audit rows stay.

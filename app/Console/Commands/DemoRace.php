@@ -27,15 +27,18 @@ class DemoRace extends Command
     protected $signature = 'demo:race
         {code : the trip join code}
         {bedId? : id of the bed to fight over (default: the first free bed)}
-        {--racers=2 : how many simultaneous racers (2-10)}';
+        {--racers=2 : how many simultaneous racers (2-10)}
+        {--allow-production : run on a live server anyway (only against a throw-away demo trip)}';
 
     protected $description = 'Prove no double booking: several processes grab the same bed at the same instant';
 
     public function handle(BedService $beds): int
     {
-        // Creates fake members and writes to a real trip, so never on a live server.
-        if (app()->isProduction()) {
-            $this->error('demo:race is disabled in production.');
+        // Creates fake members and writes to a real trip, so by default never on a live server.
+        // The flag is a deliberate, typed opt-in for a demo on a throw-away trip (racers are removed afterwards,
+        // but their audit rows stay, as everything does).
+        if (app()->isProduction() && ! $this->option('allow-production')) {
+            $this->error('demo:race is disabled in production. Use --allow-production on a throw-away demo trip.');
 
             return self::FAILURE;
         }

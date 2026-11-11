@@ -70,4 +70,18 @@ class DemoRaceTest extends TestCase
             $this->app['env'] = 'testing';
         }
     }
+
+    public function test_the_allow_production_flag_gets_past_the_production_guard(): void
+    {
+        $this->app['env'] = 'production';
+
+        try {
+            // A wrong trip code proves the command got PAST the production guard (it now fails for a different reason).
+            $this->artisan('demo:race', ['code' => 'ZZZZZZZZ', '--allow-production' => true])
+                ->expectsOutputToContain('No trip with that join code.')
+                ->assertFailed();
+        } finally {
+            $this->app['env'] = 'testing';
+        }
+    }
 }
