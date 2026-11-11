@@ -6,7 +6,7 @@
 - [x] 2. Migrations + models (trips, members, rooms, beds, vault_files, audit_logs, error_logs). Verified: migrate:fresh OK, unique taken_by_member_id blocks a 2nd bed, AuditLog is append-only
 - [x] 3. Create trip / join trip / token auth middleware (14 tests pass on real MySQL; smoke-tested over HTTP incl. CSRF 419)
 - [x] 4. Lobby: state endpoint, grab, confirm, release, expiry command, audit log, jQuery UI (34 tests pass; verified with real concurrent processes and in a browser)
-- [ ] 5. `demo:race` command (lobby tests are DONE: tests/Feature/LobbyTest.php)
+- [x] 5. `demo:race` command (37 tests pass; lobby tests in tests/Feature/LobbyTest.php, race command tests in tests/Feature/DemoRaceTest.php)
 - [ ] 5b. Local phone test on same Wi-Fi (`php artisan serve --host=0.0.0.0`, firewall, `schedule:work`)
 - [ ] 6. AWS: Free-plan account, budget alert, private encrypted S3 bucket + lifecycle rule, IAM user for local dev
 - [ ] 7. Vault: upload, 60s pre-signed links, roles, remove member, End trip now + purge, tests
@@ -76,4 +76,13 @@ Problems and fixes:
 Next:
 - Step 5: `php artisan demo:race {tripCode} {bedId}` (two truly concurrent grab requests with Laravel `Http::pool`; needs two members' tokens, so the command should create two temporary demo members or take member ids; prints who won). Then 5b: phone test on same Wi-Fi (`php artisan serve --host=0.0.0.0 --port=8000`, Windows firewall rule, `schedule:work` in a second terminal) with HOLD_SECONDS=30.
 - Also soon: error logging (daily log + error_logs table + /admin/errors + ADMIN_KEY), QR code on lobby page, Members page, Audit log page (these were not built yet).
-- User to commit step 4. Suggested message: "Add live lobby: bed holds with row locking, expiry job, polling UI and tests".
+- User to commit step 4. Suggested message: "Add live lobby: bed holds with row locking, expiry job, polling UI and tests". (DONE by user, commit 3a81141.)
+
+### 2026-11-11 (session 1, step 5: demo:race)
+Done:
+- `php artisan demo:race {code} {bedId?} --racers=2..10`: creates temporary racer members, spawns one PHP process per racer (hidden `demo:race-worker`), all fire BedService::grab at the same instant, prints a scoreboard, checks the database agrees (exactly 1 winner), prints the audit trail, tidies up (frees bed, soft-removes racers). Disabled in production. Live run with 5 racers: 1 WON, 4 lost, all within ~0.1 ms of each other, audit shows 4 grab_rejected.
+- tests/Feature/DemoRaceTest.php (3 tests). Total 37 tests, 147 assertions, Pint clean. Dev DB reset with migrate:fresh (empty).
+Problems and fixes:
+- Test that fakes production env made Laravel prompt for confirmation during the DatabaseMigrations teardown (migrate:fresh): reset env to `testing` in a finally block.
+Next:
+- 5b phone test on Wi-Fi, then error logging, Members page, Audit log page, QR code, then AWS (step 6) and the vault (step 7).
