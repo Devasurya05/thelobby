@@ -8,6 +8,7 @@ use App\Http\Controllers\JoinController;
 use App\Http\Controllers\LobbyController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\TripController;
+use App\Http\Controllers\VaultController;
 use Illuminate\Support\Facades\Route;
 
 // Trip codes are exactly 8 letters/digits; anything else is a 404 before our code even runs.
@@ -39,7 +40,20 @@ Route::middleware('trip.member')
         // JSON the lobby screen polls every ~2 seconds.
         Route::get('/state', [LobbyController::class, 'state'])->name('lobby.state');
 
+        // The vault. Any member can look; the service decides who may upload. POST for everything that changes
+        // something. Opening a file is a GET (it is just a redirect to a 60-second link) but is checked and audited.
+        Route::get('/vault', [VaultController::class, 'index'])->name('vault.index');
+        Route::middleware('throttle:vault-actions')->group(function () {
+            Route::post('/vault', [VaultController::class, 'upload'])->name('vault.upload');
+            Route::get('/vault/{fileId}/open', [VaultController::class, 'open'])->whereNumber('fileId')->name('vault.open');
+        });
+
         // Organiser-only pages. `trip.organiser` runs after `trip.member` (which found out who you are).
+        Route::middleware(['trip.organiser', 'throttle:vault-actions'])->group(function () {
+            Route::post('/vault/{fileId}/delete', [VaultController::class, 'delete'])->whereNumber('fileId')->name('vault.delete');
+            Route::post('/end-trip', [VaultController::class, 'endTrip'])->name('vault.end');
+        });
+
         Route::middleware(['trip.organiser', 'throttle:30,1'])->group(function () {
             Route::get('/members', [MemberController::class, 'index'])->name('members.index');
             Route::post('/members/{memberId}/remove', [MemberController::class, 'remove'])->whereNumber('memberId')->name('members.remove');

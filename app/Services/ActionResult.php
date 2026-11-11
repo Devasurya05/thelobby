@@ -14,11 +14,13 @@ final class ActionResult
         public readonly bool $ok,
         public readonly string $message,
         public readonly int $status,
+        // Optional extra answer on success (the vault returns the 60-second link here).
+        public readonly ?string $value = null,
     ) {}
 
-    public static function ok(string $message = ''): self
+    public static function ok(string $message = '', ?string $value = null): self
     {
-        return new self(true, $message, 200);
+        return new self(true, $message, 200, $value);
     }
 
     public static function fail(string $message, int $status = 409): self

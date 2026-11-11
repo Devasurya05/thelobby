@@ -26,6 +26,12 @@
         <div id="rooms"></div>
     </div>
 
+    <section class="card">
+        <h2>Vault</h2>
+        <p class="muted small">Tickets, passports and other private files for this trip.</p>
+        <a class="btn secondary" href="{{ route('vault.index', $trip->join_code) }}">Open the vault</a>
+    </section>
+
     @if ($member->isOrganiser())
         <section class="card">
             <h2>Organiser tools</h2>

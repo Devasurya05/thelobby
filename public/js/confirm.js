@@ -1,5 +1,5 @@
 /*
- * Members page: any form with a data-confirm attribute asks "are you sure?" before it is sent.
+ * Members and vault pages: any form with a data-confirm attribute asks "are you sure?" before it is sent.
  * Plain JavaScript. The server does not rely on this: it re-checks everything anyway.
  */
 document.addEventListener('submit', function (event) {

@@ -50,7 +50,7 @@
                         <button type="submit" class="secondary">Change role</button>
                     </form>
 
-                    {{-- data-confirm: members.js asks "are you sure?" before this form is sent. --}}
+                    {{-- data-confirm: confirm.js asks "are you sure?" before this form is sent. --}}
                     <form method="POST" action="{{ route('members.remove', [$trip->join_code, $m->id]) }}" class="inline"
                           data-confirm="Remove {{ $m->name }}? They lose access immediately and their bed is freed.">
                         @csrf
@@ -65,5 +65,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/members.js') }}"></script>
+    <script src="{{ asset('js/confirm.js') }}"></script>
 @endpush

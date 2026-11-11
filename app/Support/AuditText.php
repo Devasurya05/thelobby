@@ -26,6 +26,11 @@ class AuditText
         'rate_limited' => 'Slowed down (too many taps)',
         'member_removed' => 'Member removed',
         'role_changed' => 'Role changed',
+        'file_uploaded' => 'Uploaded a file',
+        'file_viewed' => 'Opened a file',
+        'file_deleted' => 'Deleted a file',
+        'trip_ended' => 'Trip ended',
+        'vault_purged' => 'Vault emptied (all files deleted)',
     ];
 
     public static function label(string $action): string

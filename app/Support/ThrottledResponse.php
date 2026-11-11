@@ -3,9 +3,9 @@
 namespace App\Support;
 
 use App\Models\AuditLog;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
@@ -18,7 +18,7 @@ use Throwable;
  */
 class ThrottledResponse
 {
-    public static function make(Request $request, array $headers): JsonResponse
+    public static function make(Request $request, array $headers, int $limitPerMinute = 30): Response
     {
         $trip = $request->attributes->get('trip');
         $member = $request->attributes->get('member');
@@ -29,13 +29,18 @@ class ThrottledResponse
                 try {
                     AuditLog::record($trip->id, $member->id, 'rate_limited', null, null, [
                         'route' => $request->route()?->uri(),
-                        'limit_per_minute' => 30,
+                        'limit_per_minute' => $limitPerMinute,
                     ]);
                 } catch (Throwable $e) {
                     // Failing to write the note must never turn "slow down" into a crash.
                     report($e);
                 }
             }
+        }
+
+        // The lobby screen talks JSON. A plain page (the vault's forms and links) gets sent back with a red message.
+        if (! $request->expectsJson() && $trip) {
+            return redirect()->route('vault.index', $trip->join_code)->with('problem', 'Too many requests. Wait a moment and try again.');
         }
 
         return response()->json(['ok' => false, 'message' => 'Too many taps. Wait a moment and try again.'], 429, $headers);
