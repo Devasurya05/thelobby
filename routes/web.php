@@ -66,5 +66,6 @@ Route::middleware('trip.member')
             Route::post('/beds/{bedId}/grab', [BedController::class, 'grab'])->whereNumber('bedId')->name('beds.grab');
             Route::post('/beds/{bedId}/confirm', [BedController::class, 'confirm'])->whereNumber('bedId')->name('beds.confirm');
             Route::post('/beds/{bedId}/release', [BedController::class, 'release'])->whereNumber('bedId')->name('beds.release');
+            Route::post('/beds/{bedId}/giveup', [BedController::class, 'giveUp'])->whereNumber('bedId')->name('beds.giveup');
         });
     });

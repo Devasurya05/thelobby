@@ -37,6 +37,13 @@ class BedController extends Controller
         ));
     }
 
+    public function giveUp(Request $request, string $code, int $bedId): JsonResponse
+    {
+        return $this->respond($request, $this->beds->giveUp(
+            $request->attributes->get('trip'), $request->attributes->get('member'), $bedId
+        ));
+    }
+
     // Always send back the fresh lobby state too, even on failure, so the screen is right immediately
     // (e.g. the loser of a race instantly sees the bed turn red instead of waiting for the next poll).
     private function respond(Request $request, ActionResult $result): JsonResponse

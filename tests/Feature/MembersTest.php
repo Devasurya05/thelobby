@@ -247,11 +247,11 @@ class MembersTest extends TestCase
             AuditLog::record($trip->id, $org->id, 'member_joined', 'member', $mia->id);
         }
         $first = $this->as($trip, $orgToken)->get($this->url($trip, 'audit'))->assertOk()->assertSee('Older entries');
-        $this->assertSame(50, substr_count($first->getContent(), 'class="card audit-row"'));
+        $this->assertSame(50, substr_count($first->getContent(), 'class="row audit-row"'));
 
         $oldest = AuditLog::where('trip_id', $trip->id)->orderByDesc('id')->skip(49)->first()->id;
         $second = $this->as($trip, $orgToken)->get($this->url($trip, 'audit').'?before='.$oldest)
             ->assertOk()->assertDontSee('Older entries')->assertSee('Newest');
-        $this->assertGreaterThan(0, substr_count($second->getContent(), 'class="card audit-row"'));
+        $this->assertGreaterThan(0, substr_count($second->getContent(), 'class="row audit-row"'));
     }
 }

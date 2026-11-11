@@ -1,14 +1,18 @@
 @extends('layouts.app')
 
-@section('title', $trip->name.' - The Lobby')
+@section('title', $trip->name)
+@section('description', 'The live bed lobby for '.$trip->name.'.')
 
-@section('header_right')
-    <span class="badge">{{ $member->role }}</span>
-@endsection
+@push('head')
+    <meta name="robots" content="noindex">
+@endpush
 
 @section('content')
-    <h1>{{ $trip->name }}</h1>
-    <p class="muted">{{ $trip->starts_on->format('j M Y') }} to {{ $trip->ends_on->format('j M Y') }} &middot; you are <strong>{{ $member->name }}</strong></p>
+    <div class="page-head">
+        <p class="kicker">{{ $trip->starts_on->format('j M') }} to {{ $trip->ends_on->format('j M Y') }}</p>
+        <h1>{{ $trip->name }}</h1>
+        <p class="muted">You are {{ $member->name }} <span class="chip outline">{{ $member->role }}</span></p>
+    </div>
 
     {{-- Everything the JavaScript needs comes from these data- attributes (no inline script). --}}
     <div id="lobby"
@@ -21,38 +25,23 @@
          data-poll-ms="{{ config('lobby.poll_ms') }}">
 
         <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
-        <div id="me-banner" class="me-banner">Loading the lobby...</div>
-        <div id="summary" class="summary muted small"></div>
+        <div id="me-banner" class="me-banner" aria-live="polite">Loading the lobby...</div>
+        <p id="summary" class="legend"></p>
         <div id="rooms"></div>
     </div>
 
-    <section class="card">
-        <h2>Vault</h2>
-        <p class="muted small">Tickets, passports and other private files for this trip.</p>
-        <a class="btn secondary" href="{{ route('vault.index', $trip->join_code) }}">Open the vault</a>
-    </section>
-
-    @if ($member->isOrganiser())
-        <section class="card">
-            <h2>Organiser tools</h2>
-            <div class="invite-actions">
-                <a class="btn secondary" href="{{ route('members.index', $trip->join_code) }}">Members</a>
-                <a class="btn secondary" href="{{ route('audit.index', $trip->join_code) }}">Audit log</a>
-            </div>
-        </section>
-    @endif
-
-    <section class="card">
-        <h2>Invite people</h2>
-        <p class="muted small">Send this link, or tell people the code <strong>{{ $trip->join_code }}</strong>:</p>
+    <section class="block" aria-labelledby="invite-title">
+        <h2 id="invite-title">Invite people</h2>
+        <p class="muted">Send this link, or tell people the code <strong class="mono">{{ $trip->join_code }}</strong>.</p>
+        <label class="sr-only" for="invite-link">Invite link</label>
         <input id="invite-link" class="sharebox" type="text" readonly value="{{ route('join.show', $trip->join_code) }}">
-        <div class="invite-actions">
+        <div class="actions">
             <button type="button" id="copy-invite">Copy link</button>
             {{-- wa.me just opens WhatsApp with this text ready to send; nothing is sent until the person taps Send there. --}}
             <a class="btn secondary" target="_blank" rel="noopener noreferrer"
-               href="https://wa.me/?text={{ rawurlencode('Join our trip "'.$trip->name.'" on The Lobby: '.route('join.show', $trip->join_code)) }}">WhatsApp</a>
+               href="https://wa.me/?text={{ rawurlencode('Join our trip "'.$trip->name.'" on The Lobby: '.route('join.show', $trip->join_code)) }}">Send on WhatsApp</a>
             {{-- Shown by JavaScript only on phones/browsers that have a share sheet (needs HTTPS or localhost). --}}
-            <button type="button" id="share-invite" class="secondary" hidden>Share...</button>
+            <button type="button" id="share-invite" class="secondary" hidden>Share</button>
         </div>
     </section>
 @endsection

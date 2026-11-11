@@ -18,6 +18,8 @@ class AuditText
         'bed_held' => 'Held a bed',
         'bed_confirmed' => 'Confirmed a bed',
         'bed_released' => 'Bed released',
+        'bed_given_up' => 'Gave up a confirmed bed',
+        'give_up_rejected' => 'Give-up refused',
         'hold_expired' => 'Hold ran out',
         'grab_rejected' => 'Grab refused',
         'confirm_rejected' => 'Confirm refused',

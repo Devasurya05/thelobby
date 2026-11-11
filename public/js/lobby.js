@@ -1,7 +1,7 @@
 /*
  * The Lobby screen. Plain jQuery:
  *   - every ~2 seconds ask the server for the state (GET .../state) and redraw if something changed
- *   - Grab / Confirm / Release buttons POST to the server (with the CSRF token in a header)
+ *   - Grab / Confirm / Release / Give up buttons POST to the server (with the CSRF token in a header)
  *   - the server is always the boss: this script only shows what the server says
  *
  * SECURITY NOTE: names typed by users are only ever inserted with .text(), never .html(),
@@ -81,27 +81,41 @@
         tick();
     }
 
+    // The box at the top: one short heading (kicker) and one sentence telling the person what to do next.
+    function setBanner(extraClass, kicker, text, countdownBedId) {
+        var $banner = $('#me-banner').removeClass('has-bed holding ended').addClass(extraClass).empty();
+        var $text = $('<p class="banner-text">').text(text);
+        if (countdownBedId) {
+            $text.append($('<span class="countdown">').attr('data-bed-id', countdownBedId));
+        }
+        $banner.append($('<p class="kicker">').text(kicker), $text);
+    }
+
+    function legendItem(status, label, count) {
+        return $('<span>').append($('<span class="chip">').addClass(status).text(label), $('<span class="count">').text(count));
+    }
+
     function render(state) {
         var me = state.me;
         var ended = state.trip.ended;
-        var $banner = $('#me-banner').removeClass('has-bed holding ended');
 
         if (ended) {
-            $banner.addClass('ended').text('This trip has ended. The lobby is read-only now.');
+            setBanner('ended', 'Trip ended', 'The lobby is read-only now.');
         } else if (me.taken_label) {
-            $banner.addClass('has-bed').text('Your bed: ' + me.taken_label);
+            setBanner('has-bed', 'Your bed', me.taken_label + '. You can give it up if your plans change.');
         } else if (me.held_bed_id) {
-            $banner.addClass('holding')
-                .text('You are holding a bed. Confirm it before the timer runs out: ')
-                .append($('<strong class="countdown">').attr('data-bed-id', me.held_bed_id));
+            setBanner('holding', 'Holding a bed', 'Confirm before the timer runs out: ', me.held_bed_id);
         } else if (!me.can_pick) {
-            $banner.text('You can watch the lobby, but viewers cannot pick beds.');
+            setBanner('', 'Viewing', 'You can watch the lobby. Viewers cannot pick beds.');
         } else {
-            $banner.text('Tap a free bed to hold it for a couple of minutes.');
+            setBanner('', 'Pick a bed', 'Tap Grab on a free bed. It stays yours for a short time while you decide.');
         }
 
-        $('#summary').text(
-            state.counts.free + ' free · ' + state.counts.held + ' held · ' + state.counts.taken + ' taken'
+        // The counts double as the legend for the three status labels.
+        $('#summary').empty().append(
+            legendItem('free', 'Free', state.counts.free),
+            legendItem('held', 'Held', state.counts.held),
+            legendItem('taken', 'Taken', state.counts.taken)
         );
 
         var $rooms = $('#rooms').empty();
@@ -120,16 +134,18 @@
         var $bed = $('<div class="bed">').addClass(b.status).attr('data-bed-id', b.id);
         if (b.mine) { $bed.addClass('mine'); }
 
-        $bed.append($('<div class="bed-label">').text(b.label));
+        // The status word is shown as text as well as colour, so it reads the same without colour vision.
+        $bed.append($('<div class="bed-top">').append(
+            $('<span class="bed-label">').text(b.label),
+            $('<span class="chip">').addClass(b.status).text(b.status)
+        ));
 
         var $status = $('<div class="bed-status">');
         var who = b.mine ? 'you' : b.by;
-        if (b.status === 'free') {
-            $status.text('Free');
-        } else if (b.status === 'held') {
+        if (b.status === 'held') {
             $status.append(document.createTextNode('Held by ' + who + ' · '))
                 .append($('<span class="countdown">').attr('data-bed-id', b.id));
-        } else {
+        } else if (b.status === 'taken') {
             $status.text('Taken by ' + who);
         }
         $bed.append($status);
@@ -141,6 +157,8 @@
                 $actions.append(button('grab', 'Grab'));
             } else if (b.status === 'held' && b.mine) {
                 $actions.append(button('confirm', 'Confirm'), button('release', 'Release', 'secondary'));
+            } else if (b.status === 'taken' && b.mine) {
+                $actions.append(button('giveup', 'Give up bed', 'secondary'));
             }
         }
         return $bed.append($actions);
@@ -171,12 +189,12 @@
                 } else if (xhr.status === 403) {
                     stopped = true;
                     forgetTrip();
-                    $('#me-banner').text('You have been removed from this trip.');
+                    setBanner('ended', 'Removed', 'You have been removed from this trip.');
                 } else if (xhr.status === 404) {
                     // The trip is gone (deleted): polling again would only repeat the error forever.
                     stopped = true;
                     forgetTrip();
-                    $('#me-banner').text('This trip no longer exists.');
+                    setBanner('ended', 'Gone', 'This trip no longer exists.');
                 } else {
                     notice('Connection problem. Trying again...', 'error');
                 }
@@ -189,6 +207,11 @@
 
     $root.on('click', 'button[data-action]', function () {
         if (busy) { return; }
+
+        // Giving up a confirmed bed is the one action we ask about first: someone else may grab it at once.
+        if ($(this).attr('data-action') === 'giveup' && !window.confirm('Give up your bed? Someone else can take it right away.')) {
+            return;
+        }
         busy = true;
 
         var $btn = $(this);

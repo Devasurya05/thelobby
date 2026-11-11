@@ -185,6 +185,45 @@ class BedService
     }
 
     /**
+     * Give back a CONFIRMED bed so somebody else can have it. Same lock order as everything else
+     * (member, then bed). The bed becomes free at once; the person may grab or confirm another one.
+     * Blocked once the trip has ended (cannotPlay), because the lobby is read-only then.
+     */
+    public function giveUp(Trip $trip, Member $member, int $bedId): ActionResult
+    {
+        return DB::transaction(function () use ($trip, $member, $bedId) {
+            $member = $this->lockMember($member);
+
+            if ($problem = $this->cannotPlay($trip, $member, 'give_up', $bedId)) {
+                return $problem;
+            }
+
+            $bed = $this->lockBed($trip, $bedId);
+            if ($bed === null) {
+                return ActionResult::fail('That bed does not exist.', 404);
+            }
+
+            if ($bed->status !== Bed::TAKEN || $bed->taken_by_member_id !== $member->id) {
+                $this->log($trip, $member, 'give_up_rejected', $bed, ['reason' => 'not_your_bed']);
+
+                return ActionResult::fail('That is not your bed.');
+            }
+
+            // taken_by_member_id must be cleared too: it carries the UNIQUE "one bed per person" rule.
+            $bed->forceFill([
+                'status' => Bed::FREE,
+                'taken_by_member_id' => null,
+                'held_by_member_id' => null,
+                'hold_expires_at' => null,
+            ])->save();
+
+            $this->log($trip, $member, 'bed_given_up', $bed);
+
+            return ActionResult::ok('You gave up your bed. It is free for others now.');
+        }, 3);
+    }
+
+    /**
      * Run every minute by the scheduler: free every hold whose time is up and log it.
      * Safe to run twice or at the same time as a grab: each bed is re-checked under its lock.
      * If one bed fails we report it and carry on; the next run (a minute later) tries it again.

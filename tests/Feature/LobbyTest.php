@@ -255,6 +255,80 @@ class LobbyTest extends TestCase
         $this->assertSame([$asha->id], $this->actions($trip, 'bed_released'));
     }
 
+    // ---- giving up a confirmed bed -------------------------------------------------------------
+
+    public function test_giving_up_a_confirmed_bed_frees_it_and_lets_you_pick_again(): void
+    {
+        $trip = $this->makeTrip();
+        [$asha] = $this->makeMember($trip, 'Asha');
+        [$ravi] = $this->makeMember($trip, 'Ravi');
+        $bed = $this->bedNumber($trip, 1);
+
+        $this->service->grab($trip, $asha, $bed->id);
+        $this->service->confirm($trip, $asha, $bed->id);
+        $this->assertSame(Bed::TAKEN, $bed->fresh()->status);
+
+        $result = $this->service->giveUp($trip, $asha, $bed->id);
+
+        $this->assertTrue($result->ok);
+        $bed->refresh();
+        $this->assertSame(Bed::FREE, $bed->status);
+        $this->assertNull($bed->taken_by_member_id);   // the one-bed-per-person key is cleared too
+        $this->assertSame([$asha->id], $this->actions($trip, 'bed_given_up'));
+
+        // Someone else can take it now, and Asha can pick a different one.
+        $this->assertTrue($this->service->grab($trip, $ravi, $bed->id)->ok);
+        $this->assertTrue($this->service->grab($trip, $asha, $this->bedNumber($trip, 2)->id)->ok);
+    }
+
+    public function test_you_cannot_give_up_someone_elses_bed_or_a_bed_you_only_hold(): void
+    {
+        $trip = $this->makeTrip();
+        [$asha] = $this->makeMember($trip, 'Asha');
+        [$ravi] = $this->makeMember($trip, 'Ravi');
+        $first = $this->bedNumber($trip, 1);
+        $second = $this->bedNumber($trip, 2);
+
+        $this->service->grab($trip, $asha, $first->id);
+        $this->service->confirm($trip, $asha, $first->id);
+        $this->service->grab($trip, $ravi, $second->id);          // Ravi only HOLDS bed 2
+
+        $this->assertFalse($this->service->giveUp($trip, $ravi, $first->id)->ok);   // Asha's bed
+        $this->assertFalse($this->service->giveUp($trip, $ravi, $second->id)->ok);  // only held, use Release
+
+        $this->assertSame(Bed::TAKEN, $first->fresh()->status);
+        $this->assertSame(Bed::HELD, $second->fresh()->status);
+        $this->assertSame([$ravi->id, $ravi->id], $this->actions($trip, 'give_up_rejected'));
+    }
+
+    public function test_giving_up_is_refused_once_the_trip_has_ended(): void
+    {
+        $trip = $this->makeTrip();
+        [$asha] = $this->makeMember($trip, 'Asha');
+        $bed = $this->bedNumber($trip, 1);
+        $this->service->grab($trip, $asha, $bed->id);
+        $this->service->confirm($trip, $asha, $bed->id);
+
+        $trip->forceFill(['ended_at' => now()])->save();
+
+        $this->assertFalse($this->service->giveUp($trip->fresh(), $asha, $bed->id)->ok);
+        $this->assertSame(Bed::TAKEN, $bed->fresh()->status);   // the lobby is read-only after the trip
+    }
+
+    public function test_give_up_endpoint_returns_fresh_state(): void
+    {
+        $trip = $this->makeTrip();
+        [$asha, $token] = $this->makeMember($trip, 'Asha');
+        $bed = $this->bedNumber($trip, 1);
+        $this->service->grab($trip, $asha, $bed->id);
+        $this->service->confirm($trip, $asha, $bed->id);
+
+        $response = $this->http($trip, $token)->postJson("/t/{$trip->join_code}/beds/{$bed->id}/giveup");
+
+        $response->assertOk()->assertJsonPath('ok', true)->assertJsonPath('state.me.taken_label', null);
+        $this->assertSame(Bed::FREE, $bed->fresh()->status);
+    }
+
     public function test_expire_holds_frees_only_expired_ones_logs_them_and_is_safe_to_rerun(): void
     {
         $trip = $this->makeTrip();
