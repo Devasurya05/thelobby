@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BedController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JoinController;
 use App\Http\Controllers\LobbyController;
+use App\Http\Controllers\MemberController;
 use App\Http\Controllers\TripController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +38,14 @@ Route::middleware('trip.member')
 
         // JSON the lobby screen polls every ~2 seconds.
         Route::get('/state', [LobbyController::class, 'state'])->name('lobby.state');
+
+        // Organiser-only pages. `trip.organiser` runs after `trip.member` (which found out who you are).
+        Route::middleware(['trip.organiser', 'throttle:30,1'])->group(function () {
+            Route::get('/members', [MemberController::class, 'index'])->name('members.index');
+            Route::post('/members/{memberId}/remove', [MemberController::class, 'remove'])->whereNumber('memberId')->name('members.remove');
+            Route::post('/members/{memberId}/role', [MemberController::class, 'role'])->whereNumber('memberId')->name('members.role');
+            Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+        });
 
         // Bed actions. POST (never GET) so they can't be triggered by a link or an image tag.
         Route::middleware('throttle:lobby-actions')->group(function () {

@@ -112,6 +112,23 @@ button.secondary, .btn.secondary { background: #fff; color: var(--ink); border: 
 .trip-list li:first-child { border-top: 0; }
 .trip-list a { font-weight: 700; }
 
+/* ---- Members and audit pages ---- */
+.flash { padding: 12px 14px; border-radius: 8px; margin: 12px 0; font-weight: 600; }
+.flash.ok { background: #e6f6ec; color: #14532d; border: 1px solid #b7e4c7; }
+.flash.error { background: #fdecec; color: #8a1f1f; border: 1px solid #f3b6b6; }
+.member.removed { opacity: .6; }
+.member-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.member-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+form.inline { display: flex; gap: 8px; align-items: center; margin: 0; }
+.member-actions button, .member-actions select { margin-top: 8px; }
+select { min-height: 48px; padding: 8px 12px; font: inherit; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+button.danger { background: #b42318; }
+.badge.gone { background: #fdecec; color: #8a1f1f; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.audit-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.audit-row p { margin: 4px 0 0; }
+.mono { font-family: ui-monospace, Consolas, monospace; }
+
 /* ---- Invite link ---- */
 input.sharebox { font-family: ui-monospace, Consolas, monospace; font-size: .9rem; }
 .invite-actions { display: flex; flex-wrap: wrap; gap: 8px; }

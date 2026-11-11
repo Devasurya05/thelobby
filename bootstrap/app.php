@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AdminOnly;
+use App\Http\Middleware\RequireOrganiser;
 use App\Http\Middleware\ResolveMember;
 use App\Support\ErrorRecorder;
 use Illuminate\Foundation\Application;
@@ -17,7 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // A short name we can put on routes: ->middleware('trip.member')
-        $middleware->alias(['trip.member' => ResolveMember::class, 'admin' => AdminOnly::class]);
+        $middleware->alias([
+            'trip.member' => ResolveMember::class,
+            'trip.organiser' => RequireOrganiser::class,
+            'admin' => AdminOnly::class,
+        ]);
 
         // Laravel sorts "important" middleware (like the rate limiter) to run first, no matter the order
         // written on the route. Our per-person rate limit needs to know WHO is asking, so the login

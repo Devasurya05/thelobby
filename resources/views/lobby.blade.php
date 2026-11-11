@@ -26,6 +26,16 @@
         <div id="rooms"></div>
     </div>
 
+    @if ($member->isOrganiser())
+        <section class="card">
+            <h2>Organiser tools</h2>
+            <div class="invite-actions">
+                <a class="btn secondary" href="{{ route('members.index', $trip->join_code) }}">Members</a>
+                <a class="btn secondary" href="{{ route('audit.index', $trip->join_code) }}">Audit log</a>
+            </div>
+        </section>
+    @endif
+
     <section class="card">
         <h2>Invite people</h2>
         <p class="muted small">Send this link, or tell people the code <strong>{{ $trip->join_code }}</strong>:</p>

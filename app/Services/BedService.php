@@ -36,7 +36,7 @@ use Throwable;
 class BedService
 {
     /** Tap a free bed: hold it for HOLD_SECONDS. Taking a new bed releases your previous hold. */
-    public function grab(Trip $trip, Member $member, int $bedId): BedResult
+    public function grab(Trip $trip, Member $member, int $bedId): ActionResult
     {
         return DB::transaction(function () use ($trip, $member, $bedId) {
             $member = $this->lockMember($member);
@@ -48,7 +48,7 @@ class BedService
             // Lock this bed's row. Scoped to the trip, so a bed id from another trip finds nothing.
             $bed = $this->lockBed($trip, $bedId);
             if ($bed === null) {
-                return BedResult::fail('That bed does not exist.', 404);
+                return ActionResult::fail('That bed does not exist.', 404);
             }
 
             // Everyone may take at most one bed (the UNIQUE index on beds.taken_by_member_id
@@ -56,13 +56,13 @@ class BedService
             if ($this->hasTakenBed($member)) {
                 $this->log($trip, $member, 'grab_rejected', $bed, ['reason' => 'already_has_bed']);
 
-                return BedResult::fail('You already have a bed.');
+                return ActionResult::fail('You already have a bed.');
             }
 
             if (! $bed->isAvailable()) {
                 // Double-tap on a bed you already hold: nothing to change, nothing to complain about.
                 if ($bed->status === Bed::HELD && $bed->held_by_member_id === $member->id) {
-                    return BedResult::ok('You are already holding this bed.');
+                    return ActionResult::ok('You are already holding this bed.');
                 }
 
                 // Somebody else got here first (this is the losing side of a race).
@@ -72,7 +72,7 @@ class BedService
                     'taken_by_member_id' => $bed->taken_by_member_id,
                 ]);
 
-                return BedResult::fail('Someone just grabbed this bed. Pick another one.');
+                return ActionResult::fail('Someone just grabbed this bed. Pick another one.');
             }
 
             // An expired hold counts as free. Record that the old hold ran out before we overwrite it.
@@ -103,12 +103,12 @@ class BedService
 
             $this->log($trip, $member, 'bed_held', $bed, ['hold_seconds' => $seconds]);
 
-            return BedResult::ok('Bed held. Confirm it before the timer runs out.');
+            return ActionResult::ok('Bed held. Confirm it before the timer runs out.');
         }, 3);
     }
 
     /** Confirm your held bed: it becomes yours permanently. */
-    public function confirm(Trip $trip, Member $member, int $bedId): BedResult
+    public function confirm(Trip $trip, Member $member, int $bedId): ActionResult
     {
         return DB::transaction(function () use ($trip, $member, $bedId) {
             $member = $this->lockMember($member);
@@ -119,13 +119,13 @@ class BedService
 
             $bed = $this->lockBed($trip, $bedId);
             if ($bed === null) {
-                return BedResult::fail('That bed does not exist.', 404);
+                return ActionResult::fail('That bed does not exist.', 404);
             }
 
             if ($bed->status !== Bed::HELD || $bed->held_by_member_id !== $member->id) {
                 $this->log($trip, $member, 'confirm_rejected', $bed, ['reason' => 'not_your_hold']);
 
-                return BedResult::fail('You are not holding this bed.');
+                return ActionResult::fail('You are not holding this bed.');
             }
 
             // Too late: time ran out. Free the bed now so everyone sees the truth.
@@ -133,13 +133,13 @@ class BedService
                 $this->free($bed);
                 $this->log($trip, $member, 'hold_expired', $bed);
 
-                return BedResult::fail('Your hold ran out. Grab the bed again if it is still free.');
+                return ActionResult::fail('Your hold ran out. Grab the bed again if it is still free.');
             }
 
             if ($this->hasTakenBed($member)) {
                 $this->log($trip, $member, 'confirm_rejected', $bed, ['reason' => 'already_has_bed']);
 
-                return BedResult::fail('You already have a bed.');
+                return ActionResult::fail('You already have a bed.');
             }
 
             $bed->forceFill([
@@ -151,12 +151,12 @@ class BedService
 
             $this->log($trip, $member, 'bed_confirmed', $bed);
 
-            return BedResult::ok('Bed confirmed. It is yours!');
+            return ActionResult::ok('Bed confirmed. It is yours!');
         }, 3);
     }
 
     /** Let go of a bed you are only holding (a confirmed bed cannot be released). */
-    public function release(Trip $trip, Member $member, int $bedId): BedResult
+    public function release(Trip $trip, Member $member, int $bedId): ActionResult
     {
         return DB::transaction(function () use ($trip, $member, $bedId) {
             $member = $this->lockMember($member);
@@ -167,20 +167,20 @@ class BedService
 
             $bed = $this->lockBed($trip, $bedId);
             if ($bed === null) {
-                return BedResult::fail('That bed does not exist.', 404);
+                return ActionResult::fail('That bed does not exist.', 404);
             }
 
             if ($bed->status !== Bed::HELD || $bed->held_by_member_id !== $member->id) {
                 $this->log($trip, $member, 'release_rejected', $bed, ['reason' => 'not_your_hold']);
 
-                return BedResult::fail('You are not holding this bed.');
+                return ActionResult::fail('You are not holding this bed.');
             }
 
             $expired = $bed->holdHasExpired();
             $this->free($bed);
             $this->log($trip, $member, $expired ? 'hold_expired' : 'bed_released', $bed);
 
-            return BedResult::ok('Bed released.');
+            return ActionResult::ok('Bed released.');
         }, 3);
     }
 
@@ -243,7 +243,7 @@ class BedService
     // Reasons somebody may not touch beds at all. Returns a failure to hand back, or null if fine.
     // Every refusal is written to the audit log too (who tried what), because someone poking at
     // actions they are not allowed to do is exactly what an audit trail is for.
-    private function cannotPlay(Trip $trip, Member $member, string $attempted, int $bedId): ?BedResult
+    private function cannotPlay(Trip $trip, Member $member, string $attempted, int $bedId): ?ActionResult
     {
         $reason = match (true) {
             $member->isRemoved() => 'removed',
@@ -262,9 +262,9 @@ class BedService
         ]);
 
         return match ($reason) {
-            'removed' => BedResult::fail('You have been removed from this trip.', 403),
-            'viewer' => BedResult::fail('Viewers can watch the lobby but not pick beds.', 403),
-            'trip_ended' => BedResult::fail('This trip has ended.'),
+            'removed' => ActionResult::fail('You have been removed from this trip.', 403),
+            'viewer' => ActionResult::fail('Viewers can watch the lobby but not pick beds.', 403),
+            'trip_ended' => ActionResult::fail('This trip has ended.'),
         };
     }
 

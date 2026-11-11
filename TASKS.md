@@ -9,6 +9,7 @@
 - [x] 5. `demo:race` command (37 tests pass; lobby tests in tests/Feature/LobbyTest.php, race command tests in tests/Feature/DemoRaceTest.php)
 - [x] 5a. Error logging (daily log + error_logs table + /admin/errors with ADMIN_KEY + friendly error pages), audit gaps closed (rate_limited, action_refused, release_rejected), invite link (copy / WhatsApp / share) instead of QR. 49 tests pass.
 - [x] 5b. Local phone test on same Wi-Fi: PASSED (user confirmed: two devices, grab/confirm/expire/race all fine). Firewall rule "The Lobby dev (port 8000)" was added by the user; remove it when not testing (see log). on same Wi-Fi (`php artisan serve --host=0.0.0.0`, firewall, `schedule:work`)
+- [x] 5c. Members page (organiser: list, change role member/viewer, remove with bed release) + Audit log page (organiser, readable, newest first, "older" paging). 58 tests pass.
 - [ ] 6. AWS: Free-plan account, budget alert, private encrypted S3 bucket + lifecycle rule, IAM user for local dev
 - [ ] 7. Vault: upload, 60s pre-signed links, roles, remove member, End trip now + purge, tests
 - [ ] 8. Deploy: RDS, EC2 + IAM role, Nginx/PHP-FPM, cron, migrate, test demo live
@@ -117,3 +118,14 @@ Done:
 Cleanup advice given: Ctrl+C in the server and scheduler windows; remove the firewall rule with `Remove-NetFirewallRule -DisplayName "The Lobby dev (port 8000)"` in an Administrator PowerShell; set HOLD_SECONDS back to 120 in .env for normal use.
 Next:
 - Members page + Audit log page, then AWS (step 6) and the vault (step 7).
+
+### 2026-11-11 (session 1, step 5c: Members + Audit pages)
+Done:
+- `MemberService` (remove, changeRole): one transaction, locks the target MEMBER row then their bed rows (same order as BedService, so no new deadlock pattern), returns an `ActionResult` (BedResult was renamed to `ActionResult` because both services share it). Rules: only an active organiser (re-read from the DB, not trusted from the request); the organiser cannot be removed or demoted; "organiser" can never be handed out (ASSIGNABLE_ROLES = member, viewer); a member from another trip is a 404; removing twice is a no-op with no second audit row. Removing frees the person's hold AND confirmed bed (audit `bed_released`, reason member_removed); becoming a viewer frees their open hold (a confirmed bed stays). Audit rows: `member_removed`, `role_changed`, `action_refused` (reasons not_organiser, target_is_organiser).
+- Pages behind new middleware `trip.organiser` (`RequireOrganiser`, 403 for non-organisers): `GET /t/{code}/members`, `POST .../members/{id}/remove`, `POST .../members/{id}/role` (Form Request validates the role), `GET /t/{code}/audit`. Members page: cards, role badge, "removed" badge, confirmed bed, role dropdown + Remove with a "are you sure?" prompt (public/js/members.js, data-confirm). Audit page: friendly labels via `AuditText` (raw action code shown small), bed/person names looked up in one query each, 50 per page with `?before=<id>` paging, IP addresses not shown. Lobby page has an "Organiser tools" card with both links.
+- Tests: tests/Feature/MembersTest.php (9). Total 58 tests, 297 assertions, Pint clean. Browser check: removing a person with the confirm prompt works and the audit page reads well.
+Problems and fixes:
+- In tests `withCookie()` sticks to the test client for every later request in that test (an "anonymous" request after a logged-in one was still logged in): do anonymous checks first.
+- JSON content of `details` does not keep key order: compare with assertEquals, not assertSame.
+Next:
+- Step 6: AWS (the user does the console clicks; I give exact steps and check free-plan eligibility first), then step 7 the vault.

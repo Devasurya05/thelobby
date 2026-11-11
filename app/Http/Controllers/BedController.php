@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\BedResult;
+use App\Services\ActionResult;
 use App\Services\BedService;
 use App\Services\LobbyState;
 use Illuminate\Http\JsonResponse;
@@ -39,7 +39,7 @@ class BedController extends Controller
 
     // Always send back the fresh lobby state too, even on failure, so the screen is right immediately
     // (e.g. the loser of a race instantly sees the bed turn red instead of waiting for the next poll).
-    private function respond(Request $request, BedResult $result): JsonResponse
+    private function respond(Request $request, ActionResult $result): JsonResponse
     {
         return response()->json([
             'ok' => $result->ok,

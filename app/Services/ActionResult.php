@@ -3,12 +3,12 @@
 namespace App\Services;
 
 /**
- * What BedService hands back: did it work, a message for the person, and an HTTP status.
+ * What BedService and MemberService hand back: did it work, a message for the person, and an HTTP status.
  *
  * Why not throw an exception on failure? A thrown exception rolls the database transaction back,
- * and we WANT the "grab_rejected" audit entry to be saved even though the grab failed.
+ * and we WANT a "rejected" audit entry to be saved even though the grab failed.
  */
-final class BedResult
+final class ActionResult
 {
     private function __construct(
         public readonly bool $ok,
