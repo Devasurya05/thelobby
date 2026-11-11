@@ -168,7 +168,8 @@ class DemoSiteTest extends TestCase
         $this->assertSame(0, Room::where('trip_id', $trip->id)->count());     // nothing added until the organiser says so
         $this->assertSame([$trip->join_code], $booking->fresh()->sent_to);
 
-        $this->get('/demo/stay/'.$booking->reference)->assertSee('Already sent to')->assertSee($trip->join_code);
+        // The page now says the booking is already in that trip (and links to it), instead of offering to make another.
+        $this->get('/demo/stay/'.$booking->reference)->assertSee('This booking is already in the trip')->assertSee($trip->join_code)->assertDontSee('Create a new trip');
     }
 
     public function test_sending_to_a_trip_code_that_does_not_exist_says_so_and_remembers_nothing(): void

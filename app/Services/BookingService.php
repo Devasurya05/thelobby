@@ -36,13 +36,14 @@ use Throwable;
  */
 class BookingService
 {
-    /** PULL: the organiser asks The Lobby to fetch one booking by its reference. */
-    public function importByReference(Trip $trip, Member $actor, string $providerKey, string $reference): ActionResult
-    {
-        if ($problem = $this->cannotManage($trip, $actor, 'booking_import')) {
-            return $problem;
-        }
+    public function __construct(private TripService $trips) {}
 
+    /**
+     * Ask a booking site for one booking and translate it. Returns the booking in the standard format, or a failure
+     * with a message for the person. Done BEFORE anything is locked: asking another system can be slow.
+     */
+    private function pull(string $providerKey, string $reference): BookingData|ActionResult
+    {
         $provider = Providers::find($providerKey);
         if ($provider === null) {
             return ActionResult::fail('Choose one of the booking sites in the list.', 422);
@@ -50,7 +51,6 @@ class BookingService
 
         $reference = strtoupper(trim($reference));
 
-        // The slow part (asking another system) happens BEFORE we lock anything in our database.
         try {
             $payload = $provider->fetch($reference);
         } catch (Throwable $e) {
@@ -69,6 +69,57 @@ class BookingService
         }
         if ($data->reference !== $reference) {
             return ActionResult::fail('That booking could not be read: the reference did not match.', 422);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Start a brand-new trip FROM a booking: the trip gets the booking's name and dates, the booking is added straight
+     * away, and the person who asked becomes its organiser. (The booking site calls this when someone presses
+     * "Create a new trip for this booking".)
+     */
+    public function createTripFromBooking(string $providerKey, string $reference, string $organiserName): CreatedTrip|ActionResult
+    {
+        $data = $this->pull($providerKey, $reference);
+        if ($data instanceof ActionResult) {
+            return $data;
+        }
+
+        $span = $data->span();
+        if ($data->cancelled || $span === null) {
+            return ActionResult::fail('A cancelled booking cannot start a trip.');
+        }
+
+        return DB::transaction(function () use ($data, $organiserName, $span) {
+            $created = $this->trips->create(
+                $data->tripName,
+                $organiserName,
+                $span[0],
+                $span[1],
+                [],
+                auditExtra: ['source' => 'booking', 'provider' => $data->provider],
+            );
+
+            $booking = $this->stage($created->trip, $data);
+            // The trip follows this booking's dates from now on.
+            $created->trip->forceFill(['dates_booking_id' => $booking->id])->save();
+            $this->apply($created->trip, $booking, $data, $created->organiser->id, 'booking_added');
+
+            return $created;
+        }, 3);
+    }
+
+    /** PULL: the organiser asks The Lobby to fetch one booking by its reference. */
+    public function importByReference(Trip $trip, Member $actor, string $providerKey, string $reference): ActionResult
+    {
+        if ($problem = $this->cannotManage($trip, $actor, 'booking_import')) {
+            return $problem;
+        }
+
+        $data = $this->pull($providerKey, $reference);
+        if ($data instanceof ActionResult) {
+            return $data;
         }
 
         return DB::transaction(function () use ($trip, $actor, $data) {
@@ -181,7 +232,15 @@ class BookingService
             $booking = $this->findLocked($locked, $data);
 
             if ($booking === null) {
-                $this->stage($locked, $data);
+                $booking = $this->stage($locked, $data);
+
+                // A trip created with "the rooms and dates will come from a booking" has no one to approve for:
+                // the organiser already chose this. Its FIRST booking is added straight away.
+                if ($locked->awaiting_booking && ! $data->cancelled && $data->items !== []) {
+                    $this->apply($locked, $booking, $data, null, 'booking_added');
+
+                    return 'applied';
+                }
 
                 return 'staged';
             }
@@ -229,7 +288,11 @@ class BookingService
                 array_unshift($issues, 'Cancelled at '.$booking->providerLabel().'.');
             }
         } else {
-            $issues = array_merge($this->replaceItems($trip, $booking, $data), $this->syncRooms($trip, $booking, $data->rooms));
+            $issues = array_merge(
+                $this->replaceItems($trip, $booking, $data),
+                $this->syncRooms($trip, $booking, $data->rooms),
+                $this->followDates($trip, $booking, $data),
+            );
             $status = $issues === [] ? Booking::APPLIED : Booking::NEEDS_ATTENTION;
         }
 
@@ -244,6 +307,36 @@ class BookingService
         $this->audit($trip, $actorId, $auditAction, $booking, ['version' => $data->version, 'status' => $status, 'issues' => count($issues)]);
 
         return ['status' => $status, 'issues' => $issues];
+    }
+
+    /**
+     * Keep the trip's own dates in step with the booking that gave them: the first booking sent to a trip that was
+     * "waiting for a booking", or the booking a trip was created from. Dates matter: the vault is emptied the day after
+     * the end date, so a later change is refused when it would put the end date in the past.
+     *
+     * @return list<string> problems
+     */
+    private function followDates(Trip $trip, Booking $booking, BookingData $data): array
+    {
+        $span = $data->span();
+        $mine = $trip->dates_booking_id === $booking->id;
+
+        if ($span === null || (! $trip->awaiting_booking && ! $mine)) {
+            return [];
+        }
+
+        if (! $trip->awaiting_booking && $span[1] < gmdate('Y-m-d')) {
+            return ['The trip dates were not changed, because the new end date is in the past.'];
+        }
+
+        $trip->forceFill([
+            'starts_on' => $span[0],
+            'ends_on' => $span[1],
+            'awaiting_booking' => false,
+            'dates_booking_id' => $booking->id,
+        ])->save();
+
+        return [];
     }
 
     /**

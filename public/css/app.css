@@ -113,7 +113,7 @@ button:disabled { opacity: .55; cursor: wait; }
 .link-button:hover { background: none; color: var(--accent-dark); }
 
 label { display: block; margin: 18px 0 4px; font-weight: 600; }
-input[type=text], input[type=date], input[type=time], input[type=password], textarea, select {
+input[type=text], input[type=date], input[type=time], input[type=number], input[type=password], textarea, select {
     width: 100%;
     min-height: 48px;
     padding: 10px 12px;
@@ -128,6 +128,21 @@ select { width: auto; }
 textarea { min-height: 140px; font-family: ui-monospace, Consolas, monospace; font-size: 1rem; }
 input.code { text-transform: uppercase; letter-spacing: .18em; font-family: ui-monospace, Consolas, monospace; }
 input[type="file"] { display: block; width: 100%; margin: 8px 0 12px; font: inherit; }
+/* Create form: choosing between typing rooms in and getting them from a booking, and the room rows. */
+fieldset.choice { margin: 24px 0 0; padding: 0; border: 0; }
+fieldset.choice legend { padding: 0; font-weight: 600; }
+label.radio { display: flex; gap: 12px; align-items: flex-start; margin: 10px 0 0; padding: 12px 14px; font-weight: 400; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius); cursor: pointer; }
+label.radio input { flex: none; width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--accent); }
+.label-like { margin: 18px 0 4px; font-weight: 600; }
+.room-rows { display: grid; gap: 10px; }
+.room-row { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; }
+.room-row input[type=text] { grid-column: 1 / -1; }
+.beds-field { display: flex; align-items: center; gap: 8px; }
+.beds-field input { width: 5.5rem; text-align: center; }
+@media (min-width: 40rem) {
+    .room-row { grid-template-columns: 1fr auto auto; }
+    .room-row input[type=text] { grid-column: auto; }
+}
 .hint { margin: 6px 0 0; font-size: .9rem; color: var(--muted); }
 .field-error { margin: 6px 0 0; font-size: .92rem; font-weight: 600; color: var(--danger); }
 
@@ -229,6 +244,11 @@ input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent);
     .fact-links { display: inline; margin: 0 0 0 16px; }
     .fact-links a { margin: 0 12px 0 0; }
 }
+
+/* A trip created with "the rooms and dates will come from a booking": the box that explains what to do. */
+.waiting { margin: 24px 0 0; padding: 18px 20px; background: var(--surface); border: 2px solid var(--held); border-radius: var(--radius); }
+.waiting h2 { font-size: 1.35rem; }
+.big-code { margin: 4px 0; font-size: 2rem; font-weight: 600; letter-spacing: .2em; word-break: break-all; }
 
 /* ---- Invite: deliberately smaller and quieter than the rest, at the bottom of the lobby page ---- */
 .invite { margin-top: 56px; padding: 16px 0 0; border-top: 1px solid var(--line); font-size: .92rem; }

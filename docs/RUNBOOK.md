@@ -11,7 +11,7 @@ Only AWS actions can (stopping the server, deleting the database, teardown). **N
 1. Open `<site>` in a browser: home page, padlock.
 2. Full check from the laptop (about 40 seconds, makes a throw-away trip):
    `php scripts\smoke-test.php <site>`  (add `--quick` to skip the 30-second wait). Wait a minute between runs (join and create are limited to 10 per minute).
-   It must end with `ALL PASSED` (about 36 checks, including the booking flow).
+   It must end with `ALL PASSED` (about 46 checks, including the booking flows).
 
 ## 2. Log in to the server and log out
 - Log in (PowerShell on the laptop): `ssh -i "$env:USERPROFILE\.ssh\<key>.pem" ubuntu@<elastic-ip>`
@@ -45,7 +45,9 @@ Race demo on the live server (throw-away trip only): `cd /var/www/thelobby && su
 
 ## 5b. The pretend booking sites and the booking connection
 - Pretend sites: `<site>/demo` (DemoStay hotels, DemoFly flights). Not real, free, rate limited, capped at 500 stored bookings. Switch them off completely with `bash /var/www/thelobby/deploy/set-env.sh DEMO_PARTNERS false` (then `/demo` is a 404); on again with `true`.
-- Demo flow: book on a pretend site, "Send to The Lobby" with the trip's code, the organiser presses "Add to trip" on the trip's Plan page. Later changes and cancellations on the pretend site follow by themselves. Beds that are held or confirmed are never removed: the booking shows "Needs attention" instead.
+- Demo flow, fastest: on a pretend site book, then press "Create a new trip" and type a name: a finished trip (rooms, dates, you as organiser) opens. A booking already in a live trip never makes a second trip.
+- Demo flow, trip first: on the home page choose "They will come from a booking" when creating (names only), then on a pretend site use "Already made a trip? Put its code here": the trip fills in at once (the first booking needs no approval). Keep that code private until then.
+- Demo flow, existing trip with typed rooms: send with the trip's code, the organiser presses "Add to trip" on the trip's Plan page. Later changes and cancellations on the pretend site follow by themselves. Beds that are held or confirmed are never removed: the booking shows "Needs attention" instead.
 - Show the real webhook over HTTP (on the server): `cd /var/www/thelobby && sudo -u www-data php artisan demo:webhook <trip-code> <booking-reference>` (add `--url=https://<site>` if needed). Expect `HTTP 202 {"result":"staged"}` the first time, `HTTP 200 {"result":"duplicate"}` when repeated.
 - No secret to manage: signing secrets are derived from `APP_KEY`. Do NOT change `APP_KEY` on the live server (it would also log everybody out).
 - If a booking does not arrive: `<site>/admin/errors` and `sudo grep "Webhook refused" /var/www/thelobby/storage/logs/laravel-$(date +%F).log` (a refused signature is logged without its body).

@@ -3,51 +3,41 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateTripRequest;
-use App\Models\AuditLog;
-use App\Models\Member;
-use App\Models\Trip;
+use App\Services\TripService;
 use App\Support\MemberToken;
-use Illuminate\Support\Facades\DB;
 
 class TripController extends Controller
 {
+    /** How long a "dates will come from a booking" trip keeps its placeholder dates if no booking ever arrives. */
+    private const PLACEHOLDER_DAYS = 60;
+
+    public function __construct(private TripService $trips) {}
+
     // Creates the trip, its rooms and beds, and the organiser, then logs the organiser in.
     public function store(CreateTripRequest $request)
     {
-        $token = MemberToken::generate();
-
-        // One transaction: either the whole trip is created or nothing is.
-        // (Without it, a crash half-way could leave a trip with no organiser.)
-        [$trip, $organiser] = DB::transaction(function () use ($request, $token) {
-            $trip = Trip::create([
-                'name' => $request->validated('trip_name'),
-                'join_code' => Trip::newJoinCode(),
-                'starts_on' => $request->validated('starts_on'),
-                'ends_on' => $request->validated('ends_on'),
-            ]);
-
-            $organiser = $trip->members()->create([
-                'name' => $request->validated('organiser_name'),
-                'role' => Member::ROLE_ORGANISER,
-                'token_hash' => MemberToken::hash($token), // only the hash is stored
-            ]);
-
-            foreach ($request->rooms() as $roomData) {
-                $room = $trip->rooms()->create(['name' => $roomData['name']]);
-                foreach ($roomData['beds'] as $label) {
-                    $room->beds()->create(['trip_id' => $trip->id, 'label' => $label]);
-                }
-            }
-
-            AuditLog::record($trip->id, $organiser->id, 'trip_created', 'trip', $trip->id, [
-                'rooms' => count($request->rooms()),
-            ]);
-
-            return [$trip, $organiser];
-        });
+        if ($request->fromBooking()) {
+            // No rooms and no real dates yet: the first booking sent to this trip's code fills them in.
+            $created = $this->trips->create(
+                $request->validated('trip_name'),
+                $request->validated('organiser_name'),
+                now()->toDateString(),
+                now()->addDays(self::PLACEHOLDER_DAYS)->toDateString(),
+                [],
+                awaitingBooking: true,
+            );
+        } else {
+            $created = $this->trips->create(
+                $request->validated('trip_name'),
+                $request->validated('organiser_name'),
+                $request->validated('starts_on'),
+                $request->validated('ends_on'),
+                $request->rooms(),
+            );
+        }
 
         return redirect()
-            ->route('lobby', $trip->join_code)
-            ->withCookie(MemberToken::cookie($trip, $token));
+            ->route('lobby', $created->trip->join_code)
+            ->withCookie(MemberToken::cookie($created->trip, $created->token));
     }
 }

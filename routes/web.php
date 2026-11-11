@@ -42,6 +42,7 @@ Route::middleware([EnsureDemoPartners::class, 'throttle:60,1,demo'])->prefix('de
     Route::get('/stay', [DemoStayController::class, 'create'])->name('demo.stay.create');
     Route::post('/stay', [DemoStayController::class, 'store'])->middleware('throttle:10,1,demo-book')->name('demo.stay.store');
     Route::get('/stay/{reference}', [DemoStayController::class, 'show'])->where('reference', 'STAY-[A-Z0-9]{6}')->name('demo.stay.show');
+    Route::post('/stay/{reference}/new-trip', [DemoStayController::class, 'newTrip'])->middleware('throttle:10,1,demo-send')->where('reference', 'STAY-[A-Z0-9]{6}')->name('demo.stay.newtrip');
     Route::post('/stay/{reference}/send', [DemoStayController::class, 'send'])->middleware('throttle:10,1,demo-send')->where('reference', 'STAY-[A-Z0-9]{6}')->name('demo.stay.send');
     Route::post('/stay/{reference}/change', [DemoStayController::class, 'change'])->where('reference', 'STAY-[A-Z0-9]{6}')->name('demo.stay.change');
     Route::post('/stay/{reference}/cancel', [DemoStayController::class, 'cancel'])->where('reference', 'STAY-[A-Z0-9]{6}')->name('demo.stay.cancel');
@@ -49,6 +50,7 @@ Route::middleware([EnsureDemoPartners::class, 'throttle:60,1,demo'])->prefix('de
     Route::get('/fly', [DemoFlyController::class, 'create'])->name('demo.fly.create');
     Route::post('/fly', [DemoFlyController::class, 'store'])->middleware('throttle:10,1,demo-book')->name('demo.fly.store');
     Route::get('/fly/{reference}', [DemoFlyController::class, 'show'])->where('reference', 'FLY-[A-Z0-9]{6}')->name('demo.fly.show');
+    Route::post('/fly/{reference}/new-trip', [DemoFlyController::class, 'newTrip'])->middleware('throttle:10,1,demo-send')->where('reference', 'FLY-[A-Z0-9]{6}')->name('demo.fly.newtrip');
     Route::post('/fly/{reference}/send', [DemoFlyController::class, 'send'])->middleware('throttle:10,1,demo-send')->where('reference', 'FLY-[A-Z0-9]{6}')->name('demo.fly.send');
     Route::post('/fly/{reference}/change', [DemoFlyController::class, 'change'])->where('reference', 'FLY-[A-Z0-9]{6}')->name('demo.fly.change');
     Route::post('/fly/{reference}/cancel', [DemoFlyController::class, 'cancel'])->where('reference', 'FLY-[A-Z0-9]{6}')->name('demo.fly.cancel');

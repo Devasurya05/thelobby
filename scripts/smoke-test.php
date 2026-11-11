@@ -340,6 +340,57 @@ if ($demoHome['status'] === 404) {
     }
 }
 
+// ---- 6c. trips that start from a booking ---------------------------------------------------------------------
+if ($demoHome['status'] !== 404) {
+    $dayFrom = date('Y-m-d');
+    $dayTo = date('Y-m-d', strtotime('+2 days'));
+    $newStay = function () use ($base, $dayFrom, $dayTo) {
+        $c = new Client;
+        $form = $c->get($base.'/demo/stay');
+        $r = $c->form($base.'/demo/stay', [
+            '_token' => csrf($form['body']), 'hotel' => 'hilltop', 'room_type' => 'Standard',
+            'check_in' => $dayFrom, 'check_out' => $dayTo, 'rooms' => '2', 'guests' => '2',
+        ]);
+        preg_match('#/demo/stay/(STAY-[A-Z0-9]{6})#', $r['headers']['location'] ?? '', $m);
+
+        return [$c, $m[1] ?? ''];
+    };
+
+    // (a) "Create a new trip for this booking": one name, and a finished trip comes back with the person logged in.
+    [$site2, $ref2] = $newStay();
+    $shown = $site2->get($base.'/demo/stay/'.$ref2);
+    check('the booking page offers to start a new trip', str_contains($shown['body'], 'Create a new trip'));
+    $made = $site2->form($base.'/demo/stay/'.$ref2.'/new-trip', ['_token' => csrf($shown['body']), 'organiser_name' => 'Smoke Booker']);
+    $newCode = codeFromLocation($made['headers']['location'] ?? '');
+    check('a new trip is created from the booking', $made['status'] === 302 && $newCode !== '', $newCode);
+    if ($newCode !== '') {
+        $newLobby = $site2->get($base.'/t/'.$newCode);
+        check('the person is logged in to it as organiser (no joining step)', $newLobby['status'] === 200 && str_contains($newLobby['body'], 'Hilltop Lodge trip'));
+        $newState = json_decode($site2->get($base.'/t/'.$newCode.'/state', ['Accept: application/json'])['body'], true);
+        check('its two rooms and four beds came from the booking', count(beds($newState)) === 4, 'beds '.count(beds($newState)));
+        $again = $site2->form($base.'/demo/stay/'.$ref2.'/new-trip', ['_token' => csrf($site2->get($base.'/demo/stay/'.$ref2)['body']), 'organiser_name' => 'Smoke Booker']);
+        check('asking again does not make a second trip', codeFromLocation($again['headers']['location'] ?? '') === '', 'HTTP '.$again['status']);
+        check('the booking page now points to the existing trip', str_contains($site2->get($base.'/demo/stay/'.$ref2)['body'], 'This booking is already in the trip'));
+    }
+
+    // (b) A trip created as "they will come from a booking": the first booking sent to its code fills it in at once.
+    $waitHome = $org->get($base.'/');
+    $wait = $org->form($base.'/trips', ['_token' => csrf($waitHome['body']), 'trip_name' => 'Smoke waiting trip', 'organiser_name' => 'Smoke Waiter', 'setup' => 'booking']);
+    $waitCode = codeFromLocation($wait['headers']['location'] ?? '');
+    check('a trip can be created with nothing but names', $wait['status'] === 302 && $waitCode !== '', $waitCode);
+    if ($waitCode !== '') {
+        $waitLobby = $org->get($base.'/t/'.$waitCode);
+        check('it says it is waiting for a booking', str_contains($waitLobby['body'], 'Waiting for a booking'));
+        [$site3, $ref3] = $newStay();
+        $shown3 = $site3->get($base.'/demo/stay/'.$ref3);
+        $sent = $site3->form($base.'/demo/stay/'.$ref3.'/send', ['_token' => csrf($shown3['body']), 'trip_code' => $waitCode]);
+        check('the booking is sent to the waiting trip', $sent['status'] === 302, 'HTTP '.$sent['status']);
+        $waitState = json_decode($org->get($base.'/t/'.$waitCode.'/state', ['Accept: application/json'])['body'], true);
+        check('the waiting trip filled in by itself (4 beds, no approval tap)', count(beds($waitState)) === 4, 'beds '.count(beds($waitState)));
+        check('and it no longer says it is waiting', ! str_contains($org->get($base.'/t/'.$waitCode)['body'], 'Waiting for a booking'));
+    }
+}
+
 // ---- 7. end the trip: everything is deleted --------------------------------------------------------------
 $vaultAgain = $org->get($trip.'/vault');
 $end = $org->form($trip.'/end-trip', ['_token' => csrf($vaultAgain['body'])]);

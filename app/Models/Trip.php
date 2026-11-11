@@ -16,6 +16,7 @@ class Trip extends Model
         return [
             'starts_on' => 'date',
             'ends_on' => 'date',
+            'awaiting_booking' => 'boolean',
             'ended_at' => 'datetime',
             'vault_purged_at' => 'datetime',
         ];

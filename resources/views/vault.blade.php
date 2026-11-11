@@ -64,7 +64,11 @@
         @if ($me->isOrganiser())
             <section class="danger-zone" aria-labelledby="end-title">
                 <h2 id="end-title">End trip now</h2>
-                <p class="muted measure">Closes the vault and permanently deletes every file. This also happens by itself the day after the trip's end date ({{ $trip->ends_on->format('j M Y') }}).</p>
+                @if ($trip->awaiting_booking)
+                    <p class="muted measure">Closes the vault and permanently deletes every file. This also happens by itself the day after the trip's end date, which will come from the booking.</p>
+                @else
+                    <p class="muted measure">Closes the vault and permanently deletes every file. This also happens by itself the day after the trip's end date ({{ $trip->ends_on->format('j M Y') }}).</p>
+                @endif
                 <form method="POST" action="{{ route('vault.end', $trip->join_code) }}"
                       data-confirm="End the trip now? EVERY file in the vault will be deleted forever.">
                     @csrf

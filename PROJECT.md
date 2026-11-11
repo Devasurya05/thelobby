@@ -71,3 +71,8 @@ Standard Laravel 13 skeleton plus `scripts/start-mysql.ps1`. Models in `app/Mode
 - 2026-11-11 decision: the bed rule: a booking change never removes a held or confirmed bed; it flags "Needs attention" instead.
 - 2026-11-11 decision: signing secrets for the pretend sites are derived from APP_KEY (override with PARTNER_<NAME>_SECRET for a real partner). The pretend sites call the receiver in-process; `demo:webhook` shows the real HTTP path. `DEMO_PARTNERS=false` switches `/demo` off.
 - 2026-11-11 decision: every rate limit gets its own counter name (`throttle:N,M,name`) because unnamed limits share one counter per visitor and double-count when stacked.
+
+- 2026-11-12 decision: the create form asks for rooms as simple rows (name optional, number of beds), not typed text. The server still accepts the old one-line-per-room text so nothing that sends it breaks.
+- 2026-11-12 decision: "They will come from a booking" trips (`trips.awaiting_booking`) take their FIRST booking without an approval tap, because the organiser chose that; the page tells the organiser to keep the code private until then. Every later booking needs approval.
+- 2026-11-12 decision: a booking site can create a trip for a booking (one name, organiser logged in at once), but never a second trip for a booking that is already in a live trip.
+- 2026-11-12 decision: trip dates follow the booking that gave them (`trips.dates_booking_id`), but never move the end date into the past (the vault is emptied the day after the end date).

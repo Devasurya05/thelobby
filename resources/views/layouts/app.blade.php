@@ -35,6 +35,9 @@
                     <a href="{{ url('/') }}#how">How it works</a>
                     <a href="{{ url('/') }}#create">Create a trip</a>
                     <a href="{{ url('/') }}#join">Join a trip</a>
+                    @if (config('lobby.demo_partners'))
+                        <a href="{{ route('demo.index') }}">Demo booking sites</a>
+                    @endif
                 @endif
             </nav>
         </div>

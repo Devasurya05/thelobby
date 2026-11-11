@@ -17,12 +17,16 @@
 
     <section class="block" aria-labelledby="trip-cal-title">
         <h2 id="trip-cal-title">The whole trip</h2>
-        <p class="measure">{{ $trip->starts_on->format('D j M') }} to {{ $trip->ends_on->format('D j M Y') }}.</p>
-        <div class="actions">
-            <a class="btn" href="{{ route('plan.calendar', $trip->join_code) }}">Download calendar file</a>
-            <a class="btn secondary" href="{{ $tripGoogleLink }}" target="_blank" rel="noopener noreferrer">Add trip dates to Google Calendar</a>
-        </div>
-        <p class="hint measure">The calendar file has the trip dates and everything below. Open it on your phone or computer and it goes into Apple, Google or Outlook calendar. Times are the local time at each place.</p>
+        @if ($trip->awaiting_booking)
+            <p class="measure muted">The trip dates will come from the first booking added to this trip. Until then there is nothing to add to a calendar.</p>
+        @else
+            <p class="measure">{{ $trip->starts_on->format('D j M') }} to {{ $trip->ends_on->format('D j M Y') }}.</p>
+            <div class="actions">
+                <a class="btn" href="{{ route('plan.calendar', $trip->join_code) }}">Download calendar file</a>
+                <a class="btn secondary" href="{{ $tripGoogleLink }}" target="_blank" rel="noopener noreferrer">Add trip dates to Google Calendar</a>
+            </div>
+            <p class="hint measure">The calendar file has the trip dates and everything below. Open it on your phone or computer and it goes into Apple, Google or Outlook calendar. Times are the local time at each place.</p>
+        @endif
     </section>
 
     @if ($bookings->isNotEmpty() || $me->isOrganiser())

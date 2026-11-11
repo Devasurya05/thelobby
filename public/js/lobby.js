@@ -29,6 +29,7 @@
     var busy = false;        // true while a button press is being processed (ignores double taps)
     var stopped = false;     // true once we know polling is pointless (removed from the trip)
     var noticeTimer = null;
+    var lastRoomCount = null; // how many rooms the last drawing had (null = nothing drawn yet)
 
     function formatSeconds(total) {
         var m = Math.floor(total / 60);
@@ -101,6 +102,9 @@
 
         if (ended) {
             setBanner('ended', 'Trip ended', 'The lobby is read-only now.');
+        } else if (state.rooms.length === 0) {
+            // A trip waiting for a booking has no rooms yet; they appear here on their own (this page refreshes every few seconds).
+            setBanner('', 'No rooms yet', 'Rooms and beds appear here as soon as a booking is added to the trip.');
         } else if (me.taken_label) {
             setBanner('has-bed', 'Your bed', me.taken_label + '. You can give it up if your plans change.');
         } else if (me.held_bed_id) {
@@ -111,12 +115,23 @@
             setBanner('', 'Pick a bed', 'Tap Grab on a free bed. It stays yours for a short time while you decide.');
         }
 
-        // The counts double as the legend for the three status labels.
-        $('#summary').empty().append(
-            legendItem('free', 'Free', state.counts.free),
-            legendItem('held', 'Held', state.counts.held),
-            legendItem('taken', 'Taken', state.counts.taken)
-        );
+        // The counts double as the legend for the three status labels (nothing to count while there are no rooms).
+        var $summary = $('#summary').empty();
+        if (state.rooms.length > 0) {
+            $summary.append(
+                legendItem('free', 'Free', state.counts.free),
+                legendItem('held', 'Held', state.counts.held),
+                legendItem('taken', 'Taken', state.counts.taken)
+            );
+        }
+
+        // The first rooms just arrived (a booking was sent to a trip that was waiting for one): reload once, so the
+        // dates, the place and the "waiting for a booking" box at the top are updated too.
+        if (lastRoomCount === 0 && state.rooms.length > 0) {
+            window.location.reload();
+            return;
+        }
+        lastRoomCount = state.rooms.length;
 
         var $rooms = $('#rooms').empty();
         $.each(state.rooms, function (_, room) {

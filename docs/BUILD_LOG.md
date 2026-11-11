@@ -176,3 +176,31 @@ Two PRETEND booking sites live inside the app under `/demo`: DemoStay (hotels) a
 - Suite: 205 tests passed (new: translators 29, import and bed rule 32, webhook 20, pretend sites 17), Pint clean.
 - `scripts/smoke-test.php` now also covers the booking flow (book, send, waiting, member refused, approve, change follows, forged and unsigned webhooks refused, cancel follows). Run against the local copy with real S3: ALL PASSED (36 checks).
 - Left out on purpose: importing rooms from a booking on the create-trip page; claimable flight seats; real partners.
+
+## Part 12: Easier trip setup: room rows, "from a booking", and trips made from a booking site (2026-11-12)
+
+### What changed and why
+User feedback: typing rooms as "Room 1: Window, Door" (and "bed, bed, bed") confused people; they wanted a way to create a trip with no manual input; a link to the demo sites on the home page; and the booking sites should be able to create the trip themselves.
+
+1. **Room rows instead of a typed format.** The create form now shows one row per room: an optional name and a number of beds ("2 beds"), with "Add another room" and "Remove", and a live total ("3 rooms, 6 beds in total"). Beds are named Bed 1, Bed 2 and so on; a blank name becomes "Room N". The server builds the rooms from `rooms[i][name]` and `rooms[i][beds]` (1 to 10 beds, same limits as before: 60 rooms, 200 beds). The old one-line-per-room text is still accepted by the server so the smoke test and older tests keep working, but nothing asks a person to type it any more.
+2. **Link to the demo sites** on the home page (a "Demo booking sites" block), in the menu and in the footer. All three disappear when `DEMO_PARTNERS=false`.
+3. **"They will come from a booking"** option on Create a trip (a choice between "I will add them myself" and "They will come from a booking"). Only the trip name and your name are asked. The trip is created with no rooms and placeholder dates (today plus 60 days) and the flag `trips.awaiting_booking`. The lobby shows a "Waiting for a booking" box with the trip code, and says "Keep this code to yourself until the booking is in". On a booking site the organiser types the code ("Already made a trip? Put its code here"). The FIRST booking sent to a waiting trip is added at once with no approval tap (the organiser already chose this), then the flag is cleared and the trip takes its real dates from the booking. Later bookings need approval as usual. Trade-off, stated plainly: from creation until the first booking, anyone who knows the code could send that first booking. That is why the code is shown to the organiser alone and the page says to keep it private. A cancelled booking, or one with no dates, never counts as the first booking.
+4. **"Create a new trip for this booking"** on both booking sites. One name is asked; The Lobby creates the trip (named from the booking, for example "Hotel Sunrise trip" or "Goa to Bengaluru trip"), the dates come from the booking, the booking is added straight away, and the person is logged in as organiser (the login cookie is set by the booking page, which is on the same site). Before creating, the site checks whether this booking is already in a trip: one of the trips it was sent to that still exists, has not ended and has not dismissed the booking. If so it shows "This booking is already in the trip ... Open the trip" instead of making a second one, and offers "Send it to another trip too". If not, it offers both "Start a new trip with this booking" and "Already made a trip? Put its code here". A cancelled booking cannot start a trip.
+5. **Trip dates follow the booking that gave them.** `trips.dates_booking_id` remembers which booking set the dates (a trip made from a booking, or the first booking of a waiting trip). When that booking is changed, the trip's dates change with it. A change that would put the end date in the past is NOT applied to the trip (the booking shows "Needs attention"), because the vault is emptied the day after the end date. Cancelling a booking does not rewrite the trip's dates. A trip whose dates were typed by hand never follows a booking.
+
+### Code map
+- `TripService::create()` (new, shared by the form and by "create from a booking"), `CreatedTrip` (trip, organiser, token), `CreateTripRequest` (`setup`: manual or booking; rows or old text), `TripController`.
+- `BookingService::createTripFromBooking()`, `pull()` (fetch and translate, shared with import), `followDates()`, and the first-booking auto-apply in `receive()`.
+- `BookingData::tripName` (a suggested name, set by each translator) and `BookingData::span()` (first and last day).
+- `PartnerStore::existingTrip()` and `createTrip()`; routes `POST /demo/{stay|fly}/{ref}/new-trip`; shared view `demo/_send.blade.php`.
+- Migration `2026_11_12_000012` (`awaiting_booking`, `dates_booking_id`).
+- Lobby page: "Waiting for a booking" box, "The dates will come from the booking", reloads itself once when the first rooms arrive. The Plan page and the calendar file leave out the placeholder trip dates.
+
+### Errors and lessons
+29. Symptom: the vault page crashed with "syntax error, unexpected token endif". Cause: I wrote `@if (...)text @else ({{ ... }})@endif` on one line, and Blade read the parentheses after `@else` as arguments to it. Fix: put `@if`, `@else`, `@endif` on their own lines. Lesson: in Blade, never put `(` directly after `@else`.
+30. Symptom: a test that logged in as the organiser by following a redirect got 302. Cause: Laravel's test client does not carry a cookie from one response to the next request. Fix: read the cookie from the response and send it explicitly. Lesson: tests do not behave like a browser's cookie jar.
+31. Symptom: one old test failed after the redesign ("Already sent to" not found). Cause: the booking page text changed on purpose ("This booking is already in the trip"). Fix: the test checks the new wording and that the "create a new trip" button is gone.
+
+### Proof
+- Suite: 231 passed (new file `TripSetupTest`: 26 tests), Pint clean.
+- `scripts/smoke-test.php` now also covers: a new trip created from a booking (logged in as organiser, rooms present, asking again makes no second trip, page points to the existing trip) and a waiting trip filled in by one booking. Against the local copy: ALL PASSED (about 46 checks).

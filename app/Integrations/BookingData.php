@@ -37,6 +37,8 @@ final class BookingData
         public readonly int $version,
         public readonly bool $cancelled,
         public readonly string $title,
+        // A name to use if a trip is created from this booking ("Hotel Sunrise trip"). Only used at that moment.
+        public readonly string $tripName,
         public readonly array $rooms,
         public readonly array $items,
     ) {}
@@ -47,7 +49,7 @@ final class BookingData
      *
      * @throws InvalidBookingPayload
      */
-    public static function make(string $provider, string $reference, int $version, bool $cancelled, string $title, array $rooms, array $items): self
+    public static function make(string $provider, string $reference, int $version, bool $cancelled, string $title, array $rooms, array $items, ?string $tripName = null): self
     {
         if (preg_match('/^[A-Z0-9-]{4,40}$/', $reference) !== 1) {
             throw new InvalidBookingPayload('The booking reference looks wrong.');
@@ -77,7 +79,9 @@ final class BookingData
             throw new InvalidBookingPayload('The booking has no title.');
         }
 
-        return new self($provider, $reference, $version, $cancelled, $title, $cleanRooms, $cleanItems);
+        $tripName = self::text($tripName ?? $title.' trip', 100);
+
+        return new self($provider, $reference, $version, $cancelled, $title, $tripName !== '' ? $tripName : 'Trip', $cleanRooms, $cleanItems);
     }
 
     /** @param array<string, mixed> $item */
@@ -142,6 +146,19 @@ final class BookingData
         return $t !== false && $t->format('H:i') === $value ? $value : null;
     }
 
+    /** The first day and the last day this booking covers (both Y-m-d), or null when it has no plan items. */
+    public function span(): ?array
+    {
+        if ($this->items === []) {
+            return null;
+        }
+
+        $starts = array_column($this->items, 'starts_on');
+        $ends = array_map(fn ($i) => $i['ends_on'] ?? $i['starts_on'], $this->items);
+
+        return [min($starts), max($ends)];
+    }
+
     /** One short line for the Plan page: what it is and when, then what it adds to the lobby. */
     public function summary(): string
     {
@@ -176,6 +193,7 @@ final class BookingData
             'version' => $this->version,
             'cancelled' => $this->cancelled,
             'title' => $this->title,
+            'trip_name' => $this->tripName,
             'rooms' => $this->rooms,
             'items' => $this->items,
         ];
@@ -194,6 +212,7 @@ final class BookingData
             (int) $data['version'],
             (bool) $data['cancelled'],
             (string) $data['title'],
+            (string) ($data['trip_name'] ?? $data['title'].' trip'),   // rows stored before this field existed have none
             $data['rooms'] ?? [],
             $data['items'] ?? [],
         );

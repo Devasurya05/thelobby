@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DemoStayRequest;
+use App\Http\Requests\NewTripFromBookingRequest;
 use App\Http\Requests\SendToLobbyRequest;
 use App\Integrations\DemoCatalog;
 use App\Integrations\PartnerStore;
 use App\Models\PartnerBooking;
+use App\Support\MemberToken;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -41,11 +43,29 @@ class DemoStayController extends Controller
 
     public function show(string $reference): View
     {
+        $booking = $this->find($reference);
+
         return view('demo.stay-show', [
-            'booking' => $this->find($reference),
+            'booking' => $booking,
+            'existingTrip' => $this->store->existingTrip($booking),
             'hotels' => DemoCatalog::HOTELS,
             'roomTypes' => DemoCatalog::ROOM_TYPES,
         ]);
+    }
+
+    /** "Create a new trip for this booking": the trip, its organiser (this person) and the booking, all in one step. */
+    public function newTrip(NewTripFromBookingRequest $request, string $reference): RedirectResponse
+    {
+        $result = $this->store->createTrip($this->find($reference), $request->validated('organiser_name'));
+
+        if (is_string($result)) {
+            return back()->with('problem', $result);
+        }
+
+        // The person is logged in to the new trip as its organiser (the cookie is for that trip's pages only).
+        return redirect()->route('lobby', $result->trip->join_code)
+            ->withCookie(MemberToken::cookie($result->trip, $result->token))
+            ->with('status', 'Your trip is ready, and this booking is already in it.');
     }
 
     public function send(SendToLobbyRequest $request, string $reference): RedirectResponse

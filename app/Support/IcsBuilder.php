@@ -23,7 +23,8 @@ class IcsBuilder
     /** One calendar file with the whole trip (its dates) plus every plan item. */
     public static function forTrip(Trip $trip, iterable $items): string
     {
-        $events = [[
+        // A trip still "waiting for a booking" only has placeholder dates: leave the trip event out until real ones exist.
+        $events = $trip->awaiting_booking ? [] : [[
             'uid' => 'trip-'.$trip->id.'@thelobby',
             'summary' => $trip->name,
             'all_day' => true,

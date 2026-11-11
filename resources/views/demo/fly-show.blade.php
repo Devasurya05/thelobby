@@ -30,7 +30,11 @@
         <div><dt>Status</dt><dd>{{ $cancelled ? 'Cancelled' : 'Ticketed' }}</dd></div>
     </dl>
 
-    @include('demo._send', ['sendRoute' => route('demo.fly.send', $booking->reference)])
+    @include('demo._send', [
+        'sendRoute' => route('demo.fly.send', $booking->reference),
+        'newTripRoute' => route('demo.fly.newtrip', $booking->reference),
+        'cancelled' => $cancelled,
+    ])
 
     @unless ($cancelled)
         <section class="block" aria-labelledby="change-title">

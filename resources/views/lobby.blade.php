@@ -19,11 +19,15 @@
         <div>
             <dt>When</dt>
             <dd>
-                {{ $trip->starts_on->format('D j M') }} to {{ $trip->ends_on->format('D j M Y') }}
-                <span class="fact-links">
-                    <a href="{{ route('plan.calendar', $trip->join_code) }}">Add to calendar</a>
-                    <a href="{{ $googleLink }}" target="_blank" rel="noopener noreferrer">Google Calendar</a>
-                </span>
+                @if ($trip->awaiting_booking)
+                    <span class="muted">The dates will come from the booking.</span>
+                @else
+                    {{ $trip->starts_on->format('D j M') }} to {{ $trip->ends_on->format('D j M Y') }}
+                    <span class="fact-links">
+                        <a href="{{ route('plan.calendar', $trip->join_code) }}">Add to calendar</a>
+                        <a href="{{ $googleLink }}" target="_blank" rel="noopener noreferrer">Google Calendar</a>
+                    </span>
+                @endif
             </dd>
         </div>
         <div>
@@ -54,6 +58,25 @@
             </dd>
         </div>
     </dl>
+
+    @if ($trip->awaiting_booking)
+        <section class="waiting" aria-labelledby="waiting-title">
+            <h2 id="waiting-title">Waiting for a booking</h2>
+            @if ($member->isOrganiser())
+                <p class="measure">The rooms, beds and dates of this trip will fill in by themselves as soon as a booking is sent to it. Open a booking site, book, and type this code in the "Send to The Lobby" box:</p>
+                <p class="big-code mono">{{ $trip->join_code }}</p>
+                <p class="hint measure">Keep this code to yourself until the booking is in: the first booking sent to it is added without asking. After that, people can join with the invite link below.</p>
+                <div class="actions">
+                    @if (config('lobby.demo_partners'))
+                        <a class="btn" href="{{ route('demo.index') }}">Open the demo booking sites</a>
+                    @endif
+                    <a class="btn secondary" href="{{ route('plan.index', $trip->join_code) }}">Or import by booking reference</a>
+                </div>
+            @else
+                <p class="measure muted">The organiser has not added the booking yet. The rooms will appear here as soon as they do.</p>
+            @endif
+        </section>
+    @endif
 
     {{-- Everything the JavaScript needs comes from these data- attributes (no inline script). --}}
     <div id="lobby"

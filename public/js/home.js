@@ -3,7 +3,7 @@
  *   1. "Your trips on this device": read the small list the lobby page keeps in localStorage
  *      (trip code, trip name, your name; never a token). Clicking one just opens /t/CODE: the login
  *      cookie does the rest, and if it is gone the server sends you to the join page with the code filled in.
- *   2. "Fill in an example" for the rooms box.
+ *   2. The create form: add and remove room rows, and hide dates and rooms when they will come from a booking.
  *   3. The practice lobby. It is made up on this page only: nothing is sent to the server or saved.
  */
 (function () {
@@ -41,14 +41,69 @@
     }
     if (shown > 0) { document.getElementById('my-trips').hidden = false; }
 
-    // ---- 2. example rooms -----------------------------------------------------------------------
-    var fill = document.getElementById('fill-example');
-    if (fill) {
-        fill.addEventListener('click', function () {
-            var box = document.getElementById('rooms');
-            box.value = 'Room 1: Window, Door\nRoom 2: Bed 1, Bed 2, Bed 3';
-            box.focus();
+    // ---- 2. the create form: room rows, and "rooms and dates come from a booking" ---------------
+    var rows = document.getElementById('room-rows');
+
+    // Names are rooms[0][name], rooms[0][beds], rooms[1][name]... : renumber after every add or remove so there are no gaps.
+    function renumber() {
+        var all = rows.querySelectorAll('.room-row');
+        var beds = 0;
+        Array.prototype.forEach.call(all, function (row, i) {
+            var name = row.querySelector('input[type=text]');
+            var count = row.querySelector('input[type=number]');
+            name.name = 'rooms[' + i + '][name]';
+            name.placeholder = 'Room ' + (i + 1);
+            name.setAttribute('aria-label', 'Name of room ' + (i + 1));
+            count.name = 'rooms[' + i + '][beds]';
+            count.setAttribute('aria-label', 'Beds in room ' + (i + 1));
+            beds += parseInt(count.value, 10) || 0;
+            // The last remaining row cannot be removed: a trip needs at least one room.
+            row.querySelector('.remove-room').hidden = all.length === 1;
         });
+        var total = document.getElementById('room-total');
+        total.textContent = all.length + (all.length === 1 ? ' room, ' : ' rooms, ') + beds + (beds === 1 ? ' bed in total.' : ' beds in total.');
+    }
+
+    if (rows) {
+        document.getElementById('add-room').addEventListener('click', function () {
+            if (rows.querySelectorAll('.room-row').length >= 60) { return; }
+            var copy = rows.querySelector('.room-row').cloneNode(true);
+            copy.querySelector('input[type=text]').value = '';
+            copy.querySelector('input[type=number]').value = '2';
+            rows.appendChild(copy);
+            renumber();
+            copy.querySelector('input[type=text]').focus();
+        });
+
+        rows.addEventListener('click', function (event) {
+            if (event.target.classList.contains('remove-room')) {
+                event.target.closest('.room-row').remove();
+                renumber();
+            }
+        });
+
+        rows.addEventListener('input', renumber);
+        renumber();
+    }
+
+    // "They will come from a booking" hides the dates and rooms. The hidden inputs are also disabled, so the browser
+    // does not insist they are filled in (a hidden required field blocks the form).
+    var manual = document.getElementById('manual-setup');
+    var fromBooking = document.getElementById('booking-setup');
+
+    function applySetup() {
+        var chosen = document.querySelector('input[name=setup]:checked');
+        var useBooking = chosen && chosen.value === 'booking';
+        manual.hidden = useBooking;
+        fromBooking.hidden = !useBooking;
+        Array.prototype.forEach.call(manual.querySelectorAll('input'), function (input) { input.disabled = useBooking; });
+    }
+
+    if (manual && fromBooking) {
+        Array.prototype.forEach.call(document.querySelectorAll('input[name=setup]'), function (radio) {
+            radio.addEventListener('change', applySetup);
+        });
+        applySetup();
     }
 
     // ---- 3. practice lobby ----------------------------------------------------------------------

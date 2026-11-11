@@ -10,7 +10,8 @@ namespace App\Support;
  *     Room 3
  *
  * A line with no colon is a room with a single bed called "Bed 1".
- * Plain text keeps the form simple (no JavaScript needed to add rows).
+ * The create form no longer asks people to type this (it uses simple rows); this older text format is still
+ * accepted by the server so anything that already sends it keeps working, and the limits below apply to both.
  */
 class RoomListParser
 {
@@ -49,7 +50,7 @@ class RoomListParser
     public static function check(array $rooms): ?string
     {
         if ($rooms === []) {
-            return 'Add at least one room, for example: Room 1: Window, Door';
+            return 'Add at least one room.';
         }
         if (count($rooms) > self::MAX_ROOMS) {
             return 'Too many rooms (maximum '.self::MAX_ROOMS.').';

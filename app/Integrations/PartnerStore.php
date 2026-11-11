@@ -2,7 +2,12 @@
 
 namespace App\Integrations;
 
+use App\Models\Booking;
 use App\Models\PartnerBooking;
+use App\Models\Trip;
+use App\Services\ActionResult;
+use App\Services\BookingService;
+use App\Services\CreatedTrip;
 use App\Services\PartnerWebhookSender;
 use Throwable;
 
@@ -15,7 +20,49 @@ class PartnerStore
     /** The demo tables are open to anyone who visits /demo, so they have a size limit. */
     public const MAX_BOOKINGS = 500;
 
-    public function __construct(private PartnerWebhookSender $sender) {}
+    public function __construct(private PartnerWebhookSender $sender, private BookingService $bookings) {}
+
+    /**
+     * A trip that already has this booking (so we do not make a second one): one of the trips it was sent to that still
+     * exists, is not finished, and was not dismissed by its organiser.
+     */
+    public function existingTrip(PartnerBooking $booking): ?Trip
+    {
+        foreach ($booking->sent_to ?? [] as $code) {
+            $trip = Trip::where('join_code', $code)->whereNull('ended_at')->first();
+
+            if ($trip !== null && $trip->bookings()
+                ->where('provider', $booking->provider)->where('reference', $booking->reference)
+                ->where('status', '!=', Booking::DISMISSED)->exists()) {
+                return $trip;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * "Create a new trip for this booking". Refused if the booking is already in a trip (the person is pointed to it).
+     * The trip code is remembered, so later changes to the booking follow to the new trip too.
+     *
+     * @return CreatedTrip|string a message when it could not be done
+     */
+    public function createTrip(PartnerBooking $booking, string $organiserName): CreatedTrip|string
+    {
+        $existing = $this->existingTrip($booking);
+        if ($existing !== null) {
+            return 'This booking is already in the trip '.$existing->join_code.'. Open that trip, or send the booking to a different trip with its code.';
+        }
+
+        $result = $this->bookings->createTripFromBooking($booking->provider, $booking->reference, $organiserName);
+        if ($result instanceof ActionResult) {
+            return $result->message;
+        }
+
+        $booking->forceFill(['sent_to' => array_values(array_unique(array_merge($booking->sent_to ?? [], [$result->trip->join_code])))])->save();
+
+        return $result;
+    }
 
     public function isFull(): bool
     {

@@ -24,8 +24,9 @@
         <h2>How the connection works</h2>
         <ol class="measure">
             <li>You book here and get a reference, for example <span class="mono">STAY-7K2P9Q</span>.</li>
-            <li>Press "Send to The Lobby" and type the trip's code. The site sends a signed message to The Lobby.</li>
-            <li>The organiser of that trip sees the booking on the Plan page and presses "Add to trip".</li>
+            <li>Press "Create a new trip" and type your name. A trip is made for you with its own code, and the booking is already in it.</li>
+            <li>Or, if you already have a trip, type its code. If you made it with "they will come from a booking", it fills in at once. Otherwise the organiser presses "Add to trip" on the Plan page.</li>
+            <li>The site sends The Lobby a signed message each time, so nobody can pretend to be the booking site.</li>
             <li>If you change or cancel the booking here, the trip follows by itself.</li>
         </ol>
     </section>

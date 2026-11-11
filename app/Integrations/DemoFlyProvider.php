@@ -60,6 +60,9 @@ class DemoFlyProvider implements BookingProvider
             $items[0]['title'],
             [],
             $items,
+            // "Goa to Bengaluru trip": the first flight's cities.
+            (DemoCatalog::AIRPORTS[$payload['segments'][0]['from']] ?? $payload['segments'][0]['from']).' to '
+                .(DemoCatalog::AIRPORTS[$payload['segments'][0]['to']] ?? $payload['segments'][0]['to']).' trip',
         );
     }
 

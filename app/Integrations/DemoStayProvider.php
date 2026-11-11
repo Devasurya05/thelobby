@@ -75,6 +75,7 @@ class DemoStayProvider implements BookingProvider
                 'address' => $hotel['address'] ?? null,
                 'notes' => 'DemoStay booking '.$reference,
             ]],
+            $hotel['name'].' trip',
         );
     }
 
