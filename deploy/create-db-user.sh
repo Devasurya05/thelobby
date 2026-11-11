@@ -39,4 +39,9 @@ setenv DB_USERNAME thelobby
 setenv DB_PASSWORD "$APP_PW"
 unset APP_PW
 
+# sed -i swaps .env for a brand-new file owned by this user, which would lock the web server
+# (user www-data) out of its own settings. Give the web group read access back.
+sudo chgrp www-data .env
+chmod 640 .env
+
 echo "Done. Database 'thelobby' and limited user 'thelobby' exist; .env updated (password not shown)."
