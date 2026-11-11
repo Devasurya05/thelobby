@@ -111,3 +111,24 @@ Placeholders like `<bucket>`, `<elastic-ip>` and `<rds-endpoint>` stand for real
 ### Errors this evening
 19. Symptom: one test failed after the redesign (`test_audit_page_shows_friendly_text_hides_other_trips_and_pages_back`, "0 is identical to 50"). Cause: the test counted rows by searching for the exact text `class="card audit-row"`, so it broke when the markup changed from cards to rows. Fix: the rows now carry the class `row audit-row` and the test counts that. Lesson: tests that count HTML by exact class text are fragile; count a stable marker, and re-run the whole suite after any markup change.
 20. Symptom: my "is MySQL running?" check (`Get-NetTCPConnection -LocalPort 3306`) said down while `start-mysql.ps1` said "already running". Cause: the check was the wrong tool (the database listens on a different port or address). Lesson: ask the real thing (run the tests, or the project's own start script) instead of guessing from a port.
+
+## Part 9: The Plan page, calendar files and map links (2026-11-11 night)
+
+### What it is
+A new "Plan" tab on every trip: where to be and when (a stay, a flight, tickets, a meal). Everyone in the trip can read it. Only the organiser adds or removes items. Each item has: type, title, start date, optional start time, optional end date and time, optional place name, address and notes.
+- No time given = an all-day event. Times have NO time zone on purpose: "14:00" means 14:00 at the place, and a calendar shows exactly what was typed.
+- Table `itinerary_items` (migration `2026_11_11_000008`), model `ItineraryItem`, `ItineraryService` (add and delete), `StoreItineraryItemRequest` (validation), `ItineraryController`, view `plan.blade.php`. Limits: 60 items per trip, title 120, address 200, notes 500, dates between 2000 and 2100.
+- Audit rows: `plan_item_added`, `plan_item_deleted`; a refused attempt writes `action_refused` (attempted `plan_add` or `plan_delete`). The service looks the member up fresh, so a just-removed organiser is stopped. Nothing can be added once the trip has ended.
+
+### Calendar (no sign-ups, no API keys)
+- `GET /t/{code}/calendar.ics` downloads one file with the trip's own dates (an all-day event, so it works even if the plan is empty) plus every item. `GET /t/{code}/plan/{id}.ics` downloads one item. Only people logged in to the trip can download; an id from another trip is a 404; the response is `Cache-Control: no-store`.
+- The file is built by `App\Support\IcsBuilder` following the iCalendar rules (RFC 5545): CRLF line ends, lines folded at 75 bytes without cutting a multi-byte character, and `\ ; , newline` escaped in text. The escaping also stops injection: a title with line breaks cannot create a fake second event (tested).
+- All-day events end the day AFTER the last day (the format means "up to but not including"). A timed item with no end defaults to one hour; with an end date but no end time it uses the same clock time.
+- "Google Calendar" buttons are plain links to Google's event-template URL (`PlanLinks::googleCalendar`); nothing is sent until a person taps.
+
+### Maps
+- "Open in maps" is a plain link: `https://www.google.com/maps/search/?api=1&query=<place, address>` (`PlanLinks::map`). On a phone it opens the maps app. It shows only when an item has a place or address. No map is embedded, so nothing third-party loads on the page and nothing breaks on a bad venue network.
+
+### Errors
+21. Symptom: one of my new tests failed ("2 is identical to 1") for the injection check. Cause: the test counted the text `BEGIN:VEVENT` anywhere in the file, but the escaped title legitimately contains those characters inside the SUMMARY line. Fix: the test now checks that exactly one LINE is a real `BEGIN:VEVENT` (and one `END:VEVENT`). Lesson: when testing for injection, look at structure (whole lines), not at substrings.
+- Suite: 103 passed. Checked in a browser at phone width: no overflow; the real downloaded file has the right dates, escaping and headers.

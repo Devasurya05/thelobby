@@ -28,6 +28,8 @@ class AuditText
         'rate_limited' => 'Slowed down (too many taps)',
         'member_removed' => 'Member removed',
         'role_changed' => 'Role changed',
+        'plan_item_added' => 'Added to the plan',
+        'plan_item_deleted' => 'Removed from the plan',
         'file_uploaded' => 'Uploaded a file',
         'file_viewed' => 'Opened a file',
         'file_deleted' => 'Deleted a file',

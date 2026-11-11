@@ -13,6 +13,11 @@ return [
     // If it is empty or shorter than 16 characters the admin pages are switched OFF (404).
     'admin_key' => (string) env('ADMIN_KEY', ''),
 
+    // The Plan page (stays, flights, tickets...). A cap keeps one trip from growing without limit.
+    'plan' => [
+        'max_items' => 60,
+    ],
+
     'vault' => [
         // Which filesystem disk holds the files (config/filesystems.php). Always the private S3 bucket.
         'disk' => env('VAULT_DISK', 's3'),

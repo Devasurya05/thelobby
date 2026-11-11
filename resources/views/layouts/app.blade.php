@@ -25,6 +25,7 @@
             <nav class="nav" id="site-nav" aria-label="Main">
                 @if ($navTrip && $navMember)
                     <a href="{{ route('lobby', $navTrip->join_code) }}" @if (request()->routeIs('lobby')) aria-current="page" @endif>Rooms</a>
+                    <a href="{{ route('plan.index', $navTrip->join_code) }}" @if (request()->routeIs('plan.*')) aria-current="page" @endif>Plan</a>
                     <a href="{{ route('vault.index', $navTrip->join_code) }}" @if (request()->routeIs('vault.*')) aria-current="page" @endif>Vault</a>
                     @if ($navMember->isOrganiser())
                         <a href="{{ route('members.index', $navTrip->join_code) }}" @if (request()->routeIs('members.*')) aria-current="page" @endif>People</a>

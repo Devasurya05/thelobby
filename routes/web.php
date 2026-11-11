@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BedController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ItineraryController;
 use App\Http\Controllers\JoinController;
 use App\Http\Controllers\LobbyController;
 use App\Http\Controllers\MemberController;
@@ -40,6 +41,14 @@ Route::middleware('trip.member')
         // JSON the lobby screen polls every ~2 seconds.
         Route::get('/state', [LobbyController::class, 'state'])->name('lobby.state');
 
+        // The plan (stays, flights, tickets) and its calendar files. Any member can read and download; only the
+        // organiser can add or remove items (those routes are in the organiser group further down).
+        Route::middleware('throttle:60,1')->group(function () {
+            Route::get('/plan', [ItineraryController::class, 'index'])->name('plan.index');
+            Route::get('/calendar.ics', [ItineraryController::class, 'calendar'])->name('plan.calendar');
+            Route::get('/plan/{itemId}.ics', [ItineraryController::class, 'item'])->whereNumber('itemId')->name('plan.item');
+        });
+
         // The vault. Any member can look; the service decides who may upload. POST for everything that changes
         // something. Opening a file is a GET (it is just a redirect to a 60-second link) but is checked and audited.
         Route::get('/vault', [VaultController::class, 'index'])->name('vault.index');
@@ -55,6 +64,8 @@ Route::middleware('trip.member')
         });
 
         Route::middleware(['trip.organiser', 'throttle:30,1'])->group(function () {
+            Route::post('/plan', [ItineraryController::class, 'store'])->name('plan.store');
+            Route::post('/plan/{itemId}/delete', [ItineraryController::class, 'destroy'])->whereNumber('itemId')->name('plan.delete');
             Route::get('/members', [MemberController::class, 'index'])->name('members.index');
             Route::post('/members/{memberId}/remove', [MemberController::class, 'remove'])->whereNumber('memberId')->name('members.remove');
             Route::post('/members/{memberId}/role', [MemberController::class, 'role'])->whereNumber('memberId')->name('members.role');
