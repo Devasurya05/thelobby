@@ -20,13 +20,15 @@ PHP_V=8.4
 MIN_PHP=8.4.27   # earlier 8.4 releases lack the PHP2Shell security fix
 
 echo "== 1/8 system packages =="
-sudo apt-get update -y
-sudo apt-get upgrade -y
-sudo apt-get install -y software-properties-common ca-certificates curl unzip git mysql-client nginx
+# Never ask questions (Ubuntu would otherwise pop up a "restart services?" dialog and freeze the script).
+APT="sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get -y"
+$APT update
+$APT upgrade
+$APT install software-properties-common ca-certificates curl unzip git mysql-client nginx
 # Ubuntu's own PHP is older than our minimum, so use the well-known maintained PHP repository.
 sudo add-apt-repository -y ppa:ondrej/php
-sudo apt-get update -y
-sudo apt-get install -y "php${PHP_V}-fpm" "php${PHP_V}-cli" "php${PHP_V}-mysql" "php${PHP_V}-mbstring" \
+$APT update
+$APT install "php${PHP_V}-fpm" "php${PHP_V}-cli" "php${PHP_V}-mysql" "php${PHP_V}-mbstring" \
     "php${PHP_V}-xml" "php${PHP_V}-curl" "php${PHP_V}-zip" "php${PHP_V}-intl" "php${PHP_V}-gd" "php${PHP_V}-bcmath"
 
 if ! php -r 'exit(version_compare(PHP_VERSION, $argv[1], ">=") ? 0 : 1);' "$MIN_PHP"; then
