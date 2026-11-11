@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\ThrottledResponse;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -21,7 +22,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('lobby-actions', function (Request $request) {
             $member = $request->attributes->get('member');
 
-            return Limit::perMinute(30)->by($member ? 'member:'.$member->id : 'ip:'.$request->ip());
+            return Limit::perMinute(30)
+                ->by($member ? 'member:'.$member->id : 'ip:'.$request->ip())
+                // Called when the limit is hit: logs it once a minute and answers 429.
+                ->response(fn (Request $request, array $headers) => ThrottledResponse::make($request, $headers));
         });
     }
 }

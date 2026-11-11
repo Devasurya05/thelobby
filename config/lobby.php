@@ -9,4 +9,8 @@ return [
     // How often the lobby screen asks the server for fresh bed states (milliseconds).
     'poll_ms' => (int) env('LOBBY_POLL_MS', 2000),
 
+    // Password for the owner-only pages (/admin/errors). Lives in .env only.
+    // If it is empty or shorter than 16 characters the admin pages are switched OFF (404).
+    'admin_key' => (string) env('ADMIN_KEY', ''),
+
 ];

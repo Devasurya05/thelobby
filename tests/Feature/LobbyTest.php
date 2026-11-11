@@ -307,6 +307,29 @@ class LobbyTest extends TestCase
         $this->assertSame(Bed::FREE, $bed->fresh()->status);
     }
 
+    public function test_refused_attempts_are_written_to_the_audit_log(): void
+    {
+        $trip = $this->makeTrip();
+        [$viewer] = $this->makeMember($trip, 'Vera', Member::ROLE_VIEWER);
+        [$gone] = $this->makeMember($trip, 'Gone');
+        [$asha] = $this->makeMember($trip, 'Asha');
+        $bed = $this->bedNumber($trip, 1);
+
+        $this->service->grab($trip, $viewer, $bed->id);
+        $gone->forceFill(['removed_at' => now()])->save();
+        $this->service->confirm($trip, $gone, $bed->id);
+        $this->service->release($trip, $asha, $bed->id);   // Asha is not holding it
+        $trip->forceFill(['ended_at' => now()])->save();
+        $this->service->grab($trip->fresh(), $asha, $bed->id);
+
+        $refused = AuditLog::where('action', 'action_refused')->orderBy('id')->get();
+        $this->assertSame(
+            [[$viewer->id, 'grab', 'viewer'], [$gone->id, 'confirm', 'removed'], [$asha->id, 'grab', 'trip_ended']],
+            $refused->map(fn ($l) => [$l->member_id, $l->details['attempted'], $l->details['reason']])->all(),
+        );
+        $this->assertSame([$asha->id], $this->actions($trip, 'release_rejected'));
+    }
+
     // ---- HTTP endpoints ------------------------------------------------------------------------
 
     public function test_state_endpoint_shows_beds_marks_mine_and_shows_expired_holds_as_free(): void
@@ -400,5 +423,31 @@ class LobbyTest extends TestCase
 
         $this->http($trip, $ashaToken)->postJson($url)->assertStatus(429);   // Asha is out of taps...
         $this->http($trip, $raviToken)->postJson($url)->assertStatus(409);   // ...Ravi is not affected (409 = normal answer)
+    }
+
+    public function test_hitting_the_rate_limit_is_audited_once_per_minute_not_per_tap(): void
+    {
+        $trip = $this->makeTrip();
+        [$asha, $ashaToken] = $this->makeMember($trip, 'Asha');
+        $bed = $this->bedNumber($trip, 1);
+        $url = "/t/{$trip->join_code}/beds/{$bed->id}/release";
+
+        for ($i = 0; $i < 30; $i++) {
+            $this->http($trip, $ashaToken)->postJson($url);
+        }
+        // 20 more taps while blocked: all refused, but only ONE audit row is written for the burst.
+        for ($i = 0; $i < 20; $i++) {
+            $this->http($trip, $ashaToken)->postJson($url)
+                ->assertStatus(429)
+                ->assertJsonPath('message', 'Too many taps. Wait a moment and try again.');
+        }
+        $this->assertSame([$asha->id], $this->actions($trip, 'rate_limited'));
+
+        // A minute later the limit has reset, and a NEW burst is recorded again.
+        $this->travel(61)->seconds();
+        for ($i = 0; $i < 31; $i++) {
+            $this->http($trip, $ashaToken)->postJson($url);
+        }
+        $this->assertCount(2, $this->actions($trip, 'rate_limited'));
     }
 }

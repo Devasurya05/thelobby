@@ -25,8 +25,16 @@
 
     <section class="card">
         <h2>Invite people</h2>
-        <p class="muted small">Share this link or the code <strong>{{ $trip->join_code }}</strong>:</p>
-        <div class="sharebox">{{ route('join.show', $trip->join_code) }}</div>
+        <p class="muted small">Send this link, or tell people the code <strong>{{ $trip->join_code }}</strong>:</p>
+        <input id="invite-link" class="sharebox" type="text" readonly value="{{ route('join.show', $trip->join_code) }}">
+        <div class="invite-actions">
+            <button type="button" id="copy-invite">Copy link</button>
+            {{-- wa.me just opens WhatsApp with this text ready to send; nothing is sent until the person taps Send there. --}}
+            <a class="btn secondary" target="_blank" rel="noopener noreferrer"
+               href="https://wa.me/?text={{ rawurlencode('Join our trip "'.$trip->name.'" on The Lobby: '.route('join.show', $trip->join_code)) }}">WhatsApp</a>
+            {{-- Shown by JavaScript only on phones/browsers that have a share sheet (needs HTTPS or localhost). --}}
+            <button type="button" id="share-invite" class="secondary" hidden>Share...</button>
+        </div>
     </section>
 @endsection
 

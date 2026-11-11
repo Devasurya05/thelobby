@@ -7,6 +7,7 @@
 - [x] 3. Create trip / join trip / token auth middleware (14 tests pass on real MySQL; smoke-tested over HTTP incl. CSRF 419)
 - [x] 4. Lobby: state endpoint, grab, confirm, release, expiry command, audit log, jQuery UI (34 tests pass; verified with real concurrent processes and in a browser)
 - [x] 5. `demo:race` command (37 tests pass; lobby tests in tests/Feature/LobbyTest.php, race command tests in tests/Feature/DemoRaceTest.php)
+- [x] 5a. Error logging (daily log + error_logs table + /admin/errors with ADMIN_KEY + friendly error pages), audit gaps closed (rate_limited, action_refused, release_rejected), invite link (copy / WhatsApp / share) instead of QR. 49 tests pass.
 - [ ] 5b. Local phone test on same Wi-Fi (`php artisan serve --host=0.0.0.0`, firewall, `schedule:work`)
 - [ ] 6. AWS: Free-plan account, budget alert, private encrypted S3 bucket + lifecycle rule, IAM user for local dev
 - [ ] 7. Vault: upload, 60s pre-signed links, roles, remove member, End trip now + purge, tests
@@ -14,7 +15,7 @@
 - [ ] 9. README, docs/STUDY_GUIDE.md, PROJECT.md, TASKS.md final
 - [ ] 10. Optional: SNS alerts, CloudWatch
 
-Cross-cutting: error logging (daily log + error_logs table + /admin/errors), configurable hold time in .env, QR code, mobile-first UI, HEIC upload handling, demo-files/.
+Cross-cutting: configurable hold time in .env (done), invite LINK instead of QR (done), mobile-first UI, HEIC upload handling, demo-files/, Members page, Audit log page. (Error logging: done.)
 
 ## Session log (append only)
 
@@ -86,3 +87,21 @@ Problems and fixes:
 - Test that fakes production env made Laravel prompt for confirmation during the DatabaseMigrations teardown (migrate:fresh): reset env to `testing` in a finally block.
 Next:
 - 5b phone test on Wi-Fi, then error logging, Members page, Audit log page, QR code, then AWS (step 6) and the vault (step 7).
+  (User committed step 5. Error logging, audit gaps and invite link were done next, see below.)
+
+### 2026-11-11 (session 1, step 5a: audit gaps, error logging, invite link)
+Done:
+- Audit gaps closed. `rate_limited`: when the 30/min limit is hit, `ThrottledResponse` writes ONE audit row per member per minute (Cache::add guard) and answers 429 JSON. `action_refused` (details: attempted + reason viewer/removed/trip_ended) from `BedService::cannotPlay`. `release_rejected` when releasing a bed you do not hold. Harmless double-tap on your own held bed is still not logged (noise).
+- Error logging: `LOG_STACK=daily` (14 days). `ErrorRecorder` (called from `$exceptions->report()` in bootstrap/app.php) writes unexpected errors to `error_logs`: route PATTERN not the real URL (no join codes), no query string, QueryException stored via the driver message only (no bound values), never throws. 404/403/419/429/validation are not "reported" so they are not recorded.
+- Friendly pages: resources/views/errors/{403,404,419,429,500,503} on a standalone `errors/friendly` view (does not use the main layout, because on some errors no session exists and the layout needs a CSRF token). Real detail only in log/table.
+- `/admin/login` + `/admin/errors` + logout. `ADMIN_KEY` in .env (>=16 chars; empty/short = admin pages 404). `AdminOnly` middleware (alias `admin`), key compared with hash_equals, login throttled 5/min/IP, session regenerated on login. Trip organisers are NOT admins.
+- Invite: the lobby card now has a readonly link box + Copy link (clipboard API, falls back to execCommand on plain http), a WhatsApp link (wa.me prefilled text) and a Share button shown only where `navigator.share` exists. QR dropped (no library, less attack surface).
+- `.env.example` fixed (MySQL placeholders, APP_NAME, LOG_STACK=daily, empty ADMIN_KEY). Real `.env` got LOG_STACK=daily and a generated ADMIN_KEY.
+- Tests: ErrorLoggingTest (9) + 2 new in LobbyTest. Total 49 tests, 226 assertions, Pint clean.
+- Live check: 40 rapid taps -> 30 processed and audited, 10 got 429, exactly 1 `rate_limited` row, 0 error_logs rows.
+Problems and fixes:
+- `runningInConsole()` is also true in PHPUnit, so the first ErrorRecorder version saved web errors as "artisan": now it treats a request as CLI only if it also has no matched route.
+- Pint on `bootstrap/` reformatted generated cache files: run Pint on app tests config routes only.
+- The embedded browser pane blocks clipboard access, so only the fallback message path of Copy link was seen. A real tap on a real phone/browser is still to be confirmed during the phone test.
+Next:
+- 5b phone test on Wi-Fi (also confirm Copy link and WhatsApp on the phone), Members page, Audit log page, then AWS (step 6) and the vault (step 7).

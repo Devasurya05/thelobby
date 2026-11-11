@@ -99,6 +99,11 @@ button.block, .btn.block { width: 100%; text-align: center; }
 .bed-status { color: var(--muted); font-size: .95rem; }
 .bed-actions { display: flex; gap: 8px; }
 .bed-actions button { flex: 1; margin-top: 10px; }
-button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+button.secondary, .btn.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+
+/* ---- Invite link ---- */
+input.sharebox { font-family: ui-monospace, Consolas, monospace; font-size: .9rem; }
+.invite-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.invite-actions button, .invite-actions .btn { margin-top: 10px; }
 button:disabled { opacity: .55; cursor: wait; }
 .countdown { font-variant-numeric: tabular-nums; }

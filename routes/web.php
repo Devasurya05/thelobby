@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BedController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JoinController;
@@ -17,6 +18,14 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::post('/trips', [TripController::class, 'store'])->middleware('throttle:10,1')->name('trips.store');
 Route::get('/join/{code?}', [JoinController::class, 'show'])->where('code', $code)->name('join.show');
 Route::post('/join', [JoinController::class, 'store'])->middleware('throttle:10,1')->name('join.store');
+
+// --- Owner-only pages (ADMIN_KEY in .env). Login is limited to 5 tries per minute per IP. ---
+Route::get('/admin/login', [AdminController::class, 'loginForm'])->name('admin.login');
+Route::post('/admin/login', [AdminController::class, 'login'])->middleware('throttle:5,1');
+Route::middleware('admin')->group(function () {
+    Route::get('/admin/errors', [AdminController::class, 'errors'])->name('admin.errors');
+    Route::post('/admin/logout', [AdminController::class, 'logout'])->name('admin.logout');
+});
 
 // --- Everything inside a trip: the ResolveMember middleware checks who you are first ------
 Route::middleware('trip.member')

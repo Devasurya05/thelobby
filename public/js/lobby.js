@@ -214,6 +214,34 @@
             });
     });
 
+    // ---- invite link ---------------------------------------------------------------------------
+
+    var $invite = $('#invite-link');
+
+    // The modern clipboard API only works on HTTPS or localhost. Over plain http (a phone on the
+    // Wi-Fi) we fall back to selecting the text and using the old copy command.
+    $('#copy-invite').on('click', function () {
+        var link = $invite.val();
+        function fallback() {
+            $invite.trigger('focus').get(0).select();
+            var copied = false;
+            try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
+            notice(copied ? 'Invite link copied.' : 'Press and hold the link to copy it.', copied ? 'ok' : 'error');
+        }
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(link)
+                .then(function () { notice('Invite link copied.', 'ok'); }, fallback);
+        } else {
+            fallback();
+        }
+    });
+
+    if (navigator.share) {
+        $('#share-invite').prop('hidden', false).on('click', function () {
+            navigator.share({ title: document.title, url: $invite.val() }).catch(function () { /* user closed the sheet */ });
+        });
+    }
+
     setInterval(tick, 1000);
     poll();
 }(jQuery));

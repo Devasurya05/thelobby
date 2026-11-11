@@ -41,7 +41,7 @@ class BedService
         return DB::transaction(function () use ($trip, $member, $bedId) {
             $member = $this->lockMember($member);
 
-            if ($problem = $this->cannotPlay($trip, $member)) {
+            if ($problem = $this->cannotPlay($trip, $member, 'grab', $bedId)) {
                 return $problem;
             }
 
@@ -113,7 +113,7 @@ class BedService
         return DB::transaction(function () use ($trip, $member, $bedId) {
             $member = $this->lockMember($member);
 
-            if ($problem = $this->cannotPlay($trip, $member)) {
+            if ($problem = $this->cannotPlay($trip, $member, 'confirm', $bedId)) {
                 return $problem;
             }
 
@@ -161,7 +161,7 @@ class BedService
         return DB::transaction(function () use ($trip, $member, $bedId) {
             $member = $this->lockMember($member);
 
-            if ($problem = $this->cannotPlay($trip, $member)) {
+            if ($problem = $this->cannotPlay($trip, $member, 'release', $bedId)) {
                 return $problem;
             }
 
@@ -171,6 +171,8 @@ class BedService
             }
 
             if ($bed->status !== Bed::HELD || $bed->held_by_member_id !== $member->id) {
+                $this->log($trip, $member, 'release_rejected', $bed, ['reason' => 'not_your_hold']);
+
                 return BedResult::fail('You are not holding this bed.');
             }
 
@@ -239,19 +241,31 @@ class BedService
     }
 
     // Reasons somebody may not touch beds at all. Returns a failure to hand back, or null if fine.
-    private function cannotPlay(Trip $trip, Member $member): ?BedResult
+    // Every refusal is written to the audit log too (who tried what), because someone poking at
+    // actions they are not allowed to do is exactly what an audit trail is for.
+    private function cannotPlay(Trip $trip, Member $member, string $attempted, int $bedId): ?BedResult
     {
-        if ($member->isRemoved()) {
-            return BedResult::fail('You have been removed from this trip.', 403);
-        }
-        if (! $member->canPickBeds()) {
-            return BedResult::fail('Viewers can watch the lobby but not pick beds.', 403);
-        }
-        if ($trip->hasEnded()) {
-            return BedResult::fail('This trip has ended.');
+        $reason = match (true) {
+            $member->isRemoved() => 'removed',
+            ! $member->canPickBeds() => 'viewer',
+            $trip->hasEnded() => 'trip_ended',
+            default => null,
+        };
+
+        if ($reason === null) {
+            return null;
         }
 
-        return null;
+        AuditLog::record($trip->id, $member->id, 'action_refused', 'bed', $bedId, [
+            'attempted' => $attempted,
+            'reason' => $reason,
+        ]);
+
+        return match ($reason) {
+            'removed' => BedResult::fail('You have been removed from this trip.', 403),
+            'viewer' => BedResult::fail('Viewers can watch the lobby but not pick beds.', 403),
+            'trip_ended' => BedResult::fail('This trip has ended.'),
+        };
     }
 
     private function free(Bed $bed): void
