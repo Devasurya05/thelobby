@@ -174,3 +174,8 @@ Plan (AWS console stages, user does them, screenshots back): A security groups (
 Schedule: Wed deploy over HTTP; Thu name + padlock; Fri test with friends + README/study guide drafts; Sat freeze; Sun dress rehearsal; Mon smoke check. Plan B for the demo: run locally (real S3) + screen recording.
 Open question: `demo:race` refuses to run when APP_ENV=production; decide Thursday (demo from laptop, or add a safe switch).
 User must commit and push `deploy/` (and this file) before the server can clone it.
+
+### 2026-11-11 (session 1, step 8: first server run)
+- Launched: EC2 t3.micro Ubuntu 24.04 (x86), 16 GiB gp3, role `thelobby-ec2-role`, IMDSv2 required, group `thelobby-web`; Elastic IP allocated and associated (the Free plan allows it). RDS `thelobby-db` created (MySQL 8.4.11, db.t3.micro, single-AZ, private, 20 GiB gp3, 1-day backups, Database Insights Standard). Security groups and role as planned.
+- Problem: `add-apt-repository ppa:ondrej/php` timed out. From this server every Launchpad host (api.launchpad.net, ppa.launchpadcontent.net, keyserver.ubuntu.com) times out, while github.com, getcomposer.org, packages.sury.org and the normal Ubuntu mirrors work. Ubuntu's own PHP is 8.3.6, below the security minimum, so it was not an option.
+- Fix: `setup-server.sh` now adds the PHP maintainer's own repository by hand (packages.sury.org, signing key downloaded to /usr/share/keyrings, `signed-by`), which offers PHP 8.4.27 for Ubuntu 24.04 (checked). Script still stops if PHP < 8.4.27. Correction to the earlier decision log line: the PHP source is packages.sury.org, not the ondrej PPA.

@@ -25,8 +25,13 @@ APT="sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get -y"
 $APT update
 $APT upgrade
 $APT install software-properties-common ca-certificates curl unzip git mysql-client nginx
-# Ubuntu's own PHP is older than our minimum, so use the well-known maintained PHP repository.
-sudo add-apt-repository -y ppa:ondrej/php
+# Ubuntu's own PHP (8.3.6) is older than our security minimum, so use the PHP maintainer's own repository
+# (packages.sury.org, same maintainer as the well-known PHP PPA). We add it by hand instead of with
+# add-apt-repository, because that tool needs Launchpad's website, which an AWS server may not be able to reach.
+. /etc/os-release
+sudo curl -fsSL -o /usr/share/keyrings/deb.sury.org-php.gpg https://packages.sury.org/php/apt.gpg
+echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ ${VERSION_CODENAME} main" \
+    | sudo tee /etc/apt/sources.list.d/php-sury.list >/dev/null
 $APT update
 $APT install "php${PHP_V}-fpm" "php${PHP_V}-cli" "php${PHP_V}-mysql" "php${PHP_V}-mbstring" \
     "php${PHP_V}-xml" "php${PHP_V}-curl" "php${PHP_V}-zip" "php${PHP_V}-intl" "php${PHP_V}-gd" "php${PHP_V}-bcmath"
