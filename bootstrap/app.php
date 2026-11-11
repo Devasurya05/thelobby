@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => AdminOnly::class,
         ]);
 
+        // Webhooks come from other servers, not from a browser form, so they carry no CSRF token.
+        // They are protected by their signature instead (see App\Services\WebhookReceiver).
+        $middleware->validateCsrfTokens(except: ['webhooks/*']);
+
         // Laravel sorts "important" middleware (like the rate limiter) to run first, no matter the order
         // written on the route. Our per-person rate limit needs to know WHO is asking, so the login
         // middleware must run before the rate limiter.

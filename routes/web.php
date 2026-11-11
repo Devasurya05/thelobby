@@ -3,6 +3,10 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\BedController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\DemoController;
+use App\Http\Controllers\DemoFlyController;
+use App\Http\Controllers\DemoStayController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ItineraryController;
 use App\Http\Controllers\JoinController;
@@ -10,6 +14,8 @@ use App\Http\Controllers\LobbyController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\TripController;
 use App\Http\Controllers\VaultController;
+use App\Http\Controllers\WebhookController;
+use App\Http\Middleware\EnsureDemoPartners;
 use Illuminate\Support\Facades\Route;
 
 // Trip codes are exactly 8 letters/digits; anything else is a 404 before our code even runs.
@@ -22,6 +28,31 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::post('/trips', [TripController::class, 'store'])->middleware('throttle:10,1')->name('trips.store');
 Route::get('/join/{code?}', [JoinController::class, 'show'])->where('code', $code)->name('join.show');
 Route::post('/join', [JoinController::class, 'store'])->middleware('throttle:10,1')->name('join.store');
+
+// --- Webhooks: booking sites call this with a SIGNED message (no browser, no cookie, no CSRF token) ---
+// The signature check is the lock. 120 a minute per address is far more than a real partner would send.
+Route::post('/webhooks/{provider}', [WebhookController::class, 'receive'])
+    ->where('provider', '[a-z]{2,12}')->middleware('throttle:120,1,webhook')->name('webhooks.receive');
+
+// --- The two PRETEND booking sites (DemoStay, DemoFly). They exist so the booking connection can be shown. ---
+// Open to anyone, so: rate limited, a cap on stored bookings, and the whole group can be switched off (DEMO_PARTNERS=false).
+Route::middleware([EnsureDemoPartners::class, 'throttle:60,1,demo'])->prefix('demo')->group(function () {
+    Route::get('/', [DemoController::class, 'index'])->name('demo.index');
+
+    Route::get('/stay', [DemoStayController::class, 'create'])->name('demo.stay.create');
+    Route::post('/stay', [DemoStayController::class, 'store'])->middleware('throttle:10,1,demo-book')->name('demo.stay.store');
+    Route::get('/stay/{reference}', [DemoStayController::class, 'show'])->where('reference', 'STAY-[A-Z0-9]{6}')->name('demo.stay.show');
+    Route::post('/stay/{reference}/send', [DemoStayController::class, 'send'])->middleware('throttle:10,1,demo-send')->where('reference', 'STAY-[A-Z0-9]{6}')->name('demo.stay.send');
+    Route::post('/stay/{reference}/change', [DemoStayController::class, 'change'])->where('reference', 'STAY-[A-Z0-9]{6}')->name('demo.stay.change');
+    Route::post('/stay/{reference}/cancel', [DemoStayController::class, 'cancel'])->where('reference', 'STAY-[A-Z0-9]{6}')->name('demo.stay.cancel');
+
+    Route::get('/fly', [DemoFlyController::class, 'create'])->name('demo.fly.create');
+    Route::post('/fly', [DemoFlyController::class, 'store'])->middleware('throttle:10,1,demo-book')->name('demo.fly.store');
+    Route::get('/fly/{reference}', [DemoFlyController::class, 'show'])->where('reference', 'FLY-[A-Z0-9]{6}')->name('demo.fly.show');
+    Route::post('/fly/{reference}/send', [DemoFlyController::class, 'send'])->middleware('throttle:10,1,demo-send')->where('reference', 'FLY-[A-Z0-9]{6}')->name('demo.fly.send');
+    Route::post('/fly/{reference}/change', [DemoFlyController::class, 'change'])->where('reference', 'FLY-[A-Z0-9]{6}')->name('demo.fly.change');
+    Route::post('/fly/{reference}/cancel', [DemoFlyController::class, 'cancel'])->where('reference', 'FLY-[A-Z0-9]{6}')->name('demo.fly.cancel');
+});
 
 // --- Owner-only pages (ADMIN_KEY in .env). Login is limited to 5 tries per minute per IP. ---
 Route::get('/admin/login', [AdminController::class, 'loginForm'])->name('admin.login');
@@ -43,7 +74,7 @@ Route::middleware('trip.member')
 
         // The plan (stays, flights, tickets) and its calendar files. Any member can read and download; only the
         // organiser can add or remove items (those routes are in the organiser group further down).
-        Route::middleware('throttle:60,1')->group(function () {
+        Route::middleware('throttle:60,1,plan-read')->group(function () {
             Route::get('/plan', [ItineraryController::class, 'index'])->name('plan.index');
             Route::get('/calendar.ics', [ItineraryController::class, 'calendar'])->name('plan.calendar');
             Route::get('/plan/{itemId}.ics', [ItineraryController::class, 'item'])->whereNumber('itemId')->name('plan.item');
@@ -64,6 +95,10 @@ Route::middleware('trip.member')
         });
 
         Route::middleware(['trip.organiser', 'throttle:30,1'])->group(function () {
+            Route::post('/bookings/import', [BookingController::class, 'import'])->name('bookings.import');
+            Route::post('/bookings/{bookingId}/accept', [BookingController::class, 'accept'])->whereNumber('bookingId')->name('bookings.accept');
+            Route::post('/bookings/{bookingId}/dismiss', [BookingController::class, 'dismiss'])->whereNumber('bookingId')->name('bookings.dismiss');
+            Route::post('/bookings/{bookingId}/remove', [BookingController::class, 'remove'])->whereNumber('bookingId')->name('bookings.remove');
             Route::post('/plan', [ItineraryController::class, 'store'])->name('plan.store');
             Route::post('/plan/{itemId}/delete', [ItineraryController::class, 'destroy'])->whereNumber('itemId')->name('plan.delete');
             Route::get('/members', [MemberController::class, 'index'])->name('members.index');

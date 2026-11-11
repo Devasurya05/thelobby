@@ -9,7 +9,8 @@
  * It behaves like real people: creates a throw-away trip ("Smoke test (automated)"), joins five people,
  * makes all five grab the SAME bed at the SAME moment (exactly one may win), confirms a bed, lets a
  * hold expire, uploads a file to the vault, opens it through the 60-second link, checks a stranger is
- * refused, ends the trip and checks the file is really gone.
+ * refused, books a pretend hotel and sends it to the trip (approval, change, cancellation, forged webhooks),
+ * ends the trip and checks the file is really gone.
  *
  * No Laravel needed: only PHP with the curl extension. The throw-away trip stays in the database
  * (marked ended, files deleted), like every trip, because the audit log is never erased.
@@ -280,6 +281,64 @@ $bare = (new Client)->request('GET', strtok($link, '?'), [], null, false);
 check('the same URL without the signature is refused (bucket is private)', $bare['status'] === 403, 'HTTP '.$bare['status']);
 $stranger = (new Client)->get($trip.'/vault/'.$fileId.'/open');
 check('a stranger with no login is NOT sent to the file', $stranger['status'] === 302 && ! str_contains($stranger['headers']['location'] ?? '', 'amazonaws'));
+
+// ---- 6b. the pretend booking sites and the booking connection ---------------------------------------------
+$demoHome = (new Client)->get($base.'/demo');
+if ($demoHome['status'] === 404) {
+    echo "SKIP  the pretend booking sites are switched off on this site (DEMO_PARTNERS=false)\n";
+} else {
+    $bedCount = fn () => count(beds(json_decode($org->get($trip.'/state', ['Accept: application/json'])['body'], true)));
+    $beforeBeds = $bedCount();
+
+    $site = new Client;
+    $stayForm = $site->get($base.'/demo/stay');
+    $book = $site->form($base.'/demo/stay', [
+        '_token' => csrf($stayForm['body']), 'hotel' => 'sunrise', 'room_type' => 'Sea view',
+        'check_in' => date('Y-m-d'), 'check_out' => date('Y-m-d', strtotime('+2 days')), 'rooms' => '2', 'guests' => '2',
+    ]);
+    preg_match('#/demo/stay/(STAY-[A-Z0-9]{6})#', $book['headers']['location'] ?? '', $bm);
+    $ref = $bm[1] ?? '';
+    check('the pretend hotel site takes a booking', $book['status'] === 302 && $ref !== '', $ref);
+
+    if ($ref !== '') {
+        $shown = $site->get($base.'/demo/stay/'.$ref);
+        $send = $site->form($base.'/demo/stay/'.$ref.'/send', ['_token' => csrf($shown['body']), 'trip_code' => $code]);
+        check('the booking is sent to the trip', $send['status'] === 302, 'HTTP '.$send['status']);
+
+        $plan = $org->get($trip.'/plan');
+        check('the organiser sees it waiting for approval', str_contains($plan['body'], $ref) && str_contains($plan['body'], 'Waiting for you'));
+        check('nothing was added to the lobby before approval', $bedCount() === $beforeBeds);
+
+        $member = $people[1]['client']->get($trip.'/plan');
+        $memberBtn = $people[1]['client']->form($trip.'/bookings/0/accept', ['_token' => csrf($member['body'])]);
+        check('an ordinary member cannot approve a booking', $memberBtn['status'] === 403, 'HTTP '.$memberBtn['status']);
+
+        preg_match('#/bookings/(\d+)/accept#', $plan['body'], $am);
+        $accept = $org->form($trip.'/bookings/'.($am[1] ?? '0').'/accept', ['_token' => csrf($plan['body'])]);
+        check('the organiser adds it to the trip', $accept['status'] === 302, 'HTTP '.$accept['status']);
+        check('two hotel rooms with four beds appeared in the lobby', $bedCount() === $beforeBeds + 4, 'beds '.$bedCount());
+
+        $shown2 = $site->get($base.'/demo/stay/'.$ref);
+        $change = $site->form($base.'/demo/stay/'.$ref.'/change', [
+            '_token' => csrf($shown2['body']), 'hotel' => 'aurora', 'room_type' => 'Garden view',
+            'check_in' => date('Y-m-d'), 'check_out' => date('Y-m-d', strtotime('+3 days')), 'rooms' => '3', 'guests' => '2',
+        ]);
+        check('a change on the hotel site is accepted', $change['status'] === 302, 'HTTP '.$change['status']);
+        check('the change reached the trip by itself (3 rooms now)', $bedCount() === $beforeBeds + 6, 'beds '.$bedCount());
+        $plan2 = $org->get($trip.'/plan');
+        check('the plan shows the new hotel', str_contains($plan2['body'], 'Beach Villa Aurora'));
+
+        $forged = (new Client)->request('POST', $base.'/webhooks/stay', ['Content-Type: application/json', 'X-Lobby-Timestamp: '.time(), 'X-Lobby-Signature: sha256='.str_repeat('0', 64)], json_encode(['trip_code' => $code, 'booking' => ['booking_ref' => 'STAY-FORGED']]), false);
+        check('a forged webhook is refused (401)', $forged['status'] === 401, 'HTTP '.$forged['status']);
+        $unsigned = (new Client)->request('POST', $base.'/webhooks/stay', ['Content-Type: application/json'], '{}', false);
+        check('an unsigned webhook is refused (401)', $unsigned['status'] === 401, 'HTTP '.$unsigned['status']);
+
+        $shown3 = $site->get($base.'/demo/stay/'.$ref);
+        $cancel = $site->form($base.'/demo/stay/'.$ref.'/cancel', ['_token' => csrf($shown3['body'])]);
+        check('cancelling on the hotel site is accepted', $cancel['status'] === 302, 'HTTP '.$cancel['status']);
+        check('the cancellation removed the free rooms from the trip', $bedCount() === $beforeBeds, 'beds '.$bedCount());
+    }
+}
 
 // ---- 7. end the trip: everything is deleted --------------------------------------------------------------
 $vaultAgain = $org->get($trip.'/vault');

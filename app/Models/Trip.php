@@ -60,6 +60,11 @@ class Trip extends Model
         return $this->hasMany(VaultFile::class);
     }
 
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
     public function itineraryItems(): HasMany
     {
         return $this->hasMany(ItineraryItem::class);

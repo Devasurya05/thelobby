@@ -65,3 +65,9 @@ Standard Laravel 13 skeleton plus `scripts/start-mysql.ps1`. Models in `app/Mode
 
 - 2026-11-11 decision: the lobby page is the trip's home. "Where" is derived from the first stay on the Plan (no separate place column). Invite is small and at the bottom; Vault is a normal block above it and also in the top menu and the end links.
 - 2026-11-11 decision: Create and Join on the home page are two stacked sections with their own anchors (`#create`, `#join`); nav, hero and footer link to those.
+
+- 2026-11-11 decision: booking sites are connected through ONE standard format (`BookingData`) and one plain hand-written translator class per site (no AI at run time, no mapping engine). Each translator has a saved sample message and a test.
+- 2026-11-11 decision: a booking pushed by webhook waits for the organiser ("Add to trip") because the trip code is known to every member; later versions of an approved booking apply by themselves. Import by reference needs no extra approval (the organiser is acting).
+- 2026-11-11 decision: the bed rule: a booking change never removes a held or confirmed bed; it flags "Needs attention" instead.
+- 2026-11-11 decision: signing secrets for the pretend sites are derived from APP_KEY (override with PARTNER_<NAME>_SECRET for a real partner). The pretend sites call the receiver in-process; `demo:webhook` shows the real HTTP path. `DEMO_PARTNERS=false` switches `/demo` off.
+- 2026-11-11 decision: every rate limit gets its own counter name (`throttle:N,M,name`) because unnamed limits share one counter per visitor and double-count when stacked.

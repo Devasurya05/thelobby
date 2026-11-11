@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreItineraryItemRequest;
+use App\Integrations\Providers;
+use App\Models\Booking;
 use App\Models\ItineraryItem;
 use App\Models\Trip;
 use App\Services\ActionResult;
@@ -27,10 +29,13 @@ class ItineraryController extends Controller
     {
         $trip = $request->attributes->get('trip');
 
-        $items = $trip->itineraryItems()->orderBy('starts_on')->orderBy('starts_time')->orderBy('id')->get();
+        $items = $trip->itineraryItems()->with('booking:id,provider,reference')->orderBy('starts_on')->orderBy('starts_time')->orderBy('id')->get();
 
         return view('plan', [
             'trip' => $trip,
+            // Dismissed bookings are hidden here (the Activity log keeps the history).
+            'bookings' => $trip->bookings()->where('status', '!=', Booking::DISMISSED)->orderByDesc('id')->get(),
+            'providers' => Providers::all(),
             'me' => $request->attributes->get('member'),
             // Grouped by day so the page reads like a diary.
             'days' => $items->groupBy(fn (ItineraryItem $i) => $i->starts_on->format('Y-m-d')),

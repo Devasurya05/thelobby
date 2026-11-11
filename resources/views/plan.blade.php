@@ -25,6 +25,81 @@
         <p class="hint measure">The calendar file has the trip dates and everything below. Open it on your phone or computer and it goes into Apple, Google or Outlook calendar. Times are the local time at each place.</p>
     </section>
 
+    @if ($bookings->isNotEmpty() || $me->isOrganiser())
+        <section class="block" aria-labelledby="bookings-title">
+            <h2 id="bookings-title">Bookings</h2>
+            <p class="muted measure">Bookings made on booking sites. They add the rooms and the plan items for you, and follow later changes.</p>
+
+            @foreach ($bookings as $b)
+                @php
+                    [$chip, $label] = match ($b->status) {
+                        'pending' => ['held', $me->isOrganiser() ? 'Waiting for you' : 'Waiting for the organiser'],
+                        'applied' => ['free', 'Added'],
+                        'needs_attention' => ['gone', 'Needs attention'],
+                        default => ['taken', 'Cancelled'],
+                    };
+                @endphp
+                <div class="row">
+                    <div>
+                        <p><strong>{{ $b->providerLabel() }}</strong> <span class="mono small">{{ $b->reference }}</span> <span class="chip {{ $chip }}">{{ $label }}</span></p>
+                        <p class="small">{{ $b->bookingData()->summary() }}</p>
+                        @if ($b->attention)
+                            <p class="small attention">{{ $b->attention }}</p>
+                        @endif
+                        @if ($b->applied_at)
+                            <p class="muted small">Last updated {{ $b->applied_at->format('j M, H:i') }}</p>
+                        @endif
+                    </div>
+                    @if ($me->isOrganiser())
+                        <div class="row-actions">
+                            @if ($b->status === 'pending')
+                                <form method="POST" action="{{ route('bookings.accept', [$trip->join_code, $b->id]) }}" class="inline">
+                                    @csrf
+                                    <button type="submit">Add to trip</button>
+                                </form>
+                                <form method="POST" action="{{ route('bookings.dismiss', [$trip->join_code, $b->id]) }}" class="inline"
+                                      data-confirm="Dismiss this booking? Nothing will be added, and later changes to it will be ignored.">
+                                    @csrf
+                                    <button type="submit" class="secondary">Dismiss</button>
+                                </form>
+                            @else
+                                <form method="POST" action="{{ route('bookings.remove', [$trip->join_code, $b->id]) }}" class="inline"
+                                      data-confirm="Remove this booking from the trip? Its plan items go, and so do its rooms if nobody is in them.">
+                                    @csrf
+                                    <button type="submit" class="secondary">Remove from trip</button>
+                                </form>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+
+            @if ($me->isOrganiser() && ! $trip->hasEnded())
+                <form method="POST" action="{{ route('bookings.import', $trip->join_code) }}" class="form-grid" style="margin-top: 20px">
+                    @csrf
+                    <div>
+                        <label for="provider">Booking site</label>
+                        <select id="provider" name="provider" required>
+                            @foreach ($providers as $key => $provider)
+                                <option value="{{ $key }}" @selected(old('provider') === $key)>{{ $provider->label() }}</option>
+                            @endforeach
+                        </select>
+                        @error('provider') <p class="field-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="reference">Booking reference</label>
+                        <input id="reference" class="code" type="text" name="reference" value="{{ old('reference') }}" maxlength="40" autocomplete="off" placeholder="STAY-7K2P9Q" required>
+                        @error('reference') <p class="field-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="span-2 actions"><button type="submit" class="secondary">Import a booking</button></div>
+                </form>
+                @if (config('lobby.demo_partners'))
+                    <p class="hint measure">No booking yet? Make one on the pretend booking sites: <a href="{{ route('demo.stay.create') }}" target="_blank" rel="noopener">DemoStay</a> (hotels) or <a href="{{ route('demo.fly.create') }}" target="_blank" rel="noopener">DemoFly</a> (flights). After booking, press "Send to The Lobby" there with this trip's code <strong class="mono">{{ $trip->join_code }}</strong>.</p>
+                @endif
+            @endif
+        </section>
+    @endif
+
     <section class="block" aria-labelledby="items-title">
         <h2 id="items-title">Day by day</h2>
 
@@ -42,6 +117,9 @@
                         @if ($item->notes)
                             <p class="muted small">{{ $item->notes }}</p>
                         @endif
+                        @if ($item->booking)
+                            <p class="muted small">From the {{ $item->booking->providerLabel() }} booking {{ $item->booking->reference }}.</p>
+                        @endif
                     </div>
                     <div class="row-actions">
                         <a class="btn secondary" href="{{ route('plan.item', [$trip->join_code, $item->id]) }}">Calendar file</a>
@@ -49,7 +127,7 @@
                         @if ($mapLink)
                             <a class="btn secondary" href="{{ $mapLink }}" target="_blank" rel="noopener noreferrer">Open in maps</a>
                         @endif
-                        @if ($me->isOrganiser())
+                        @if ($me->isOrganiser() && ! $item->booking_id)
                             <form method="POST" action="{{ route('plan.delete', [$trip->join_code, $item->id]) }}" class="inline"
                                   data-confirm="Remove {{ $item->title }} from the plan?">
                                 @csrf

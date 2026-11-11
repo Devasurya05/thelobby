@@ -11,7 +11,7 @@ Only AWS actions can (stopping the server, deleting the database, teardown). **N
 1. Open `<site>` in a browser: home page, padlock.
 2. Full check from the laptop (about 40 seconds, makes a throw-away trip):
    `php scripts\smoke-test.php <site>`  (add `--quick` to skip the 30-second wait). Wait a minute between runs (join and create are limited to 10 per minute).
-   It must end with `ALL PASSED` (24 checks).
+   It must end with `ALL PASSED` (about 36 checks, including the booking flow).
 
 ## 2. Log in to the server and log out
 - Log in (PowerShell on the laptop): `ssh -i "$env:USERPROFILE\.ssh\<key>.pem" ubuntu@<elastic-ip>`
@@ -42,6 +42,13 @@ Only AWS actions can (stopping the server, deleting the database, teardown). **N
 | Name does not resolve | DuckDNS page: the name's IP must be `<elastic-ip>`. The site also works at `http://<elastic-ip>` as a last resort (no padlock). |
 
 Race demo on the live server (throw-away trip only): `cd /var/www/thelobby && sudo -u www-data php artisan demo:race <code> --racers=5 --allow-production`
+
+## 5b. The pretend booking sites and the booking connection
+- Pretend sites: `<site>/demo` (DemoStay hotels, DemoFly flights). Not real, free, rate limited, capped at 500 stored bookings. Switch them off completely with `bash /var/www/thelobby/deploy/set-env.sh DEMO_PARTNERS false` (then `/demo` is a 404); on again with `true`.
+- Demo flow: book on a pretend site, "Send to The Lobby" with the trip's code, the organiser presses "Add to trip" on the trip's Plan page. Later changes and cancellations on the pretend site follow by themselves. Beds that are held or confirmed are never removed: the booking shows "Needs attention" instead.
+- Show the real webhook over HTTP (on the server): `cd /var/www/thelobby && sudo -u www-data php artisan demo:webhook <trip-code> <booking-reference>` (add `--url=https://<site>` if needed). Expect `HTTP 202 {"result":"staged"}` the first time, `HTTP 200 {"result":"duplicate"}` when repeated.
+- No secret to manage: signing secrets are derived from `APP_KEY`. Do NOT change `APP_KEY` on the live server (it would also log everybody out).
+- If a booking does not arrive: `<site>/admin/errors` and `sudo grep "Webhook refused" /var/www/thelobby/storage/logs/laravel-$(date +%F).log` (a refused signature is logged without its body).
 
 ## 6. Monday-morning checklist (10 minutes)
 1. Open `<site>` on the laptop and on a phone using mobile data (not the venue Wi-Fi).

@@ -153,6 +153,11 @@ input[type="file"] { display: block; width: 100%; margin: 8px 0 12px; font: inhe
 .row-actions .btn, .row-actions button { min-height: 44px; padding: 8px 14px; }
 form.inline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
 .member.removed { opacity: .6; }
+.attention { color: var(--danger); font-weight: 600; }
+/* The pretend booking sites: a dark strip so nobody mistakes them for real sites. */
+.demo-strip { padding: 8px 0; font-size: .88rem; color: var(--paper); background: var(--ink); }
+.demo-strip a { color: var(--paper); }
+input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
 .day { margin: 28px 0 0; font: 500 1.2rem var(--serif); letter-spacing: 0; }
 .form-grid { display: grid; gap: 0 20px; }
 .form-grid .span-2 { grid-column: 1 / -1; }

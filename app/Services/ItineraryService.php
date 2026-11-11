@@ -58,6 +58,11 @@ class ItineraryService
                 return ActionResult::fail('That item is already gone.', 404);
             }
 
+            // Items that came from a booking are owned by that booking: it would just put them back on its next change.
+            if ($item->booking_id !== null) {
+                return ActionResult::fail('That item comes from a booking. Remove the booking to remove it.');
+            }
+
             $item->delete();
 
             AuditLog::record($trip->id, $actor->id, 'plan_item_deleted', 'plan_item', $itemId, [

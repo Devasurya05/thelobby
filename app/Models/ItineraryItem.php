@@ -22,7 +22,7 @@ class ItineraryItem extends Model
     ];
 
     protected $fillable = [
-        'trip_id', 'created_by_member_id', 'kind', 'title', 'starts_on', 'starts_time',
+        'trip_id', 'booking_id', 'created_by_member_id', 'kind', 'title', 'starts_on', 'starts_time',
         'ends_on', 'ends_time', 'place', 'address', 'notes',
     ];
 
@@ -34,6 +34,11 @@ class ItineraryItem extends Model
     public function trip(): BelongsTo
     {
         return $this->belongsTo(Trip::class);
+    }
+
+    public function booking(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class);
     }
 
     public function kindLabel(): string

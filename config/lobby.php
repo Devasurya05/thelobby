@@ -18,6 +18,22 @@ return [
         'max_items' => 60,
     ],
 
+    // The two PRETEND booking sites (DemoStay and DemoFly) under /demo. Switch off with DEMO_PARTNERS=false.
+    'demo_partners' => (bool) env('DEMO_PARTNERS', true),
+
+    // Shared secrets used to sign webhooks. Leave empty for our own pretend sites: the secret is then derived from
+    // APP_KEY (see App\Integrations\Providers::secret). A real partner would get its own value here.
+    'partners' => [
+        'stay' => ['secret' => env('PARTNER_STAY_SECRET')],
+        'fly' => ['secret' => env('PARTNER_FLY_SECRET')],
+    ],
+
+    // Webhook safety limits: a signed message older than this is refused (stops replays), and so is a huge body.
+    'webhook' => [
+        'max_age_seconds' => 300,
+        'max_bytes' => 100000,
+    ],
+
     'vault' => [
         // Which filesystem disk holds the files (config/filesystems.php). Always the private S3 bucket.
         'disk' => env('VAULT_DISK', 's3'),
