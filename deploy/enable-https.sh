@@ -9,7 +9,8 @@
 set -euo pipefail
 
 DOMAIN="${1:?Usage: bash enable-https.sh <domain-name> <your-email>}"
-EMAIL="${2:?missing email (Let's Encrypt sends expiry warnings there)}"
+# (No apostrophes inside the ${...:?...} message: bash can lose track of where the quoted text ends.)
+EMAIL="${2:?missing email, the certificate authority sends expiry warnings there}"
 APP_DIR=/var/www/thelobby
 
 echo "== 1/5 does the name point at this server? =="
