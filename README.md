@@ -1,5 +1,19 @@
 # The Lobby
 
+## Live demo: **https://thelobby-trips.duckdns.org**
+
+Open it on your phone or laptop. It is running right now on AWS.
+
+> **Please note.** The demo runs on AWS free-plan credits, so it is **not guaranteed to stay online**: it may be slow, reset, or switched off without notice. It is a public demo, so **please do not upload anything private** (no real passports or tickets). Test files and trips may be deleted at any time.
+
+**Try it in one minute**
+
+1. On the home page press **Create a trip**, fill in the trip name, your name and the dates (two rooms are already filled in for you), and press **Create trip**. You get a trip code and an invite link.
+2. Open the invite link on a phone, or in a private window (a normal second tab shares your login), and join with another name. Tap the **same bed** on both: exactly one wins.
+3. Want to see the booking idea? Open the **Demo booking sites** link in the menu, book a hotel, and press **Create a new trip**. The rooms, beds, dates and place fill in by themselves.
+
+(The pages explain themselves as you go. The sections below explain how it is built.)
+
 **Pick your bed. No clashes.** A group-trip app where everyone chooses a bed in a live lobby, tickets and passports go in a private vault that deletes itself when the trip ends, and bookings from booking sites fill the trip in for you.
 
 Built with **PHP 8.4, Laravel 13, MySQL 8.4, Blade and jQuery**, and deployed on **AWS** (EC2, RDS, S3). It is deliberately backend-heavy: the interesting parts are concurrency, security and integrations, not screens.
@@ -253,7 +267,7 @@ It was built to stay within the AWS Free plan and its credits. That is not free 
 
 ## Demo script (about five minutes)
 
-1. Create a trip, then open the invite link in a second browser (or a phone) and join as someone else.
+1. Create a trip, then open the invite link on a phone or in a private window and join as someone else.
 2. Race: run `demo:race` against the trip (or tap the same bed on two phones). Exactly one wins, and the other is told why.
 3. Confirm a bed, give it up, watch the other phone update.
 4. Open the vault, upload a PDF, open it, and show that the link dies after a minute.
