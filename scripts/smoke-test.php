@@ -84,14 +84,24 @@ final class Client
 
     public function request(string $method, string $url, array $headers = [], $body = null, bool $cookies = true): array
     {
-        $ch = $this->handle($method, $url, $headers, $body, $cookies);
-        $raw = curl_exec($ch);
-        if ($raw === false) {
-            fwrite(STDERR, 'Network error: '.curl_error($ch)."\n");
-            exit(2);
-        }
+        // The site limits how fast one visitor may create trips, join and so on. If it says "slow down" (429), wait as
+        // long as it asks and try the same request once more, instead of reporting a false failure.
+        for ($attempt = 1; ; $attempt++) {
+            $ch = $this->handle($method, $url, $headers, $body, $cookies);
+            $raw = curl_exec($ch);
+            if ($raw === false) {
+                fwrite(STDERR, 'Network error: '.curl_error($ch)."\n");
+                exit(2);
+            }
+            $result = self::result($ch, $raw);
 
-        return self::result($ch, $raw);
+            if ($result['status'] !== 429 || $attempt >= 2) {
+                return $result;
+            }
+            $wait = min(65, max(1, (int) ($result['headers']['retry-after'] ?? 60)));
+            echo "      (rate limited on $method ".parse_url($url, PHP_URL_PATH).": waiting $wait seconds, then retrying)\n";
+            sleep($wait);
+        }
     }
 
     public function get(string $url, array $headers = []): array
@@ -377,7 +387,7 @@ if ($demoHome['status'] !== 404) {
     $waitHome = $org->get($base.'/');
     $wait = $org->form($base.'/trips', ['_token' => csrf($waitHome['body']), 'trip_name' => 'Smoke waiting trip', 'organiser_name' => 'Smoke Waiter', 'setup' => 'booking']);
     $waitCode = codeFromLocation($wait['headers']['location'] ?? '');
-    check('a trip can be created with nothing but names', $wait['status'] === 302 && $waitCode !== '', $waitCode);
+    check('a trip can be created with nothing but names', $wait['status'] === 302 && $waitCode !== '', $waitCode !== '' ? $waitCode : 'HTTP '.$wait['status']);
     if ($waitCode !== '') {
         $waitLobby = $org->get($base.'/t/'.$waitCode);
         check('it says it is waiting for a booking', str_contains($waitLobby['body'], 'Waiting for a booking'));

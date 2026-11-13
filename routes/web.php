@@ -24,10 +24,11 @@ $code = '[A-Za-z0-9]{8}';
 // --- Public pages (no login) -------------------------------------------------------------
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// throttle:10,1 = at most 10 requests per minute per IP (stops code guessing and spam).
-Route::post('/trips', [TripController::class, 'store'])->middleware('throttle:10,1')->name('trips.store');
+// throttle:10,1,name = at most 10 requests per minute per IP, with its OWN counter called "name". Without a name,
+// every limit like this shares one counter per visitor, so creating trips would use up the join limit.
+Route::post('/trips', [TripController::class, 'store'])->middleware('throttle:10,1,trips-create')->name('trips.store');
 Route::get('/join/{code?}', [JoinController::class, 'show'])->where('code', $code)->name('join.show');
-Route::post('/join', [JoinController::class, 'store'])->middleware('throttle:10,1')->name('join.store');
+Route::post('/join', [JoinController::class, 'store'])->middleware('throttle:10,1,join')->name('join.store');
 
 // --- Webhooks: booking sites call this with a SIGNED message (no browser, no cookie, no CSRF token) ---
 // The signature check is the lock. 120 a minute per address is far more than a real partner would send.
@@ -58,7 +59,7 @@ Route::middleware([EnsureDemoPartners::class, 'throttle:60,1,demo'])->prefix('de
 
 // --- Owner-only pages (ADMIN_KEY in .env). Login is limited to 5 tries per minute per IP. ---
 Route::get('/admin/login', [AdminController::class, 'loginForm'])->name('admin.login');
-Route::post('/admin/login', [AdminController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/admin/login', [AdminController::class, 'login'])->middleware('throttle:5,1,admin-login');
 Route::middleware('admin')->group(function () {
     Route::get('/admin/errors', [AdminController::class, 'errors'])->name('admin.errors');
     Route::post('/admin/logout', [AdminController::class, 'logout'])->name('admin.logout');
@@ -96,7 +97,7 @@ Route::middleware('trip.member')
             Route::post('/end-trip', [VaultController::class, 'endTrip'])->name('vault.end');
         });
 
-        Route::middleware(['trip.organiser', 'throttle:30,1'])->group(function () {
+        Route::middleware(['trip.organiser', 'throttle:30,1,organiser'])->group(function () {
             Route::post('/bookings/import', [BookingController::class, 'import'])->name('bookings.import');
             Route::post('/bookings/{bookingId}/accept', [BookingController::class, 'accept'])->whereNumber('bookingId')->name('bookings.accept');
             Route::post('/bookings/{bookingId}/dismiss', [BookingController::class, 'dismiss'])->whereNumber('bookingId')->name('bookings.dismiss');

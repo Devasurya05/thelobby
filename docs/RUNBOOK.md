@@ -10,7 +10,7 @@ Only AWS actions can (stopping the server, deleting the database, teardown). **N
 ## 1. Is the live site healthy? (60 seconds)
 1. Open `<site>` in a browser: home page, padlock.
 2. Full check from the laptop (about 40 seconds, makes a throw-away trip):
-   `php scripts\smoke-test.php <site>`  (add `--quick` to skip the 30-second wait). Wait a minute between runs (join and create are limited to 10 per minute).
+   `php scripts\smoke-test.php <site>`  (add `--quick` to skip the 30-second wait). The script waits and retries by itself if the site says "slow down" (join and create are limited to 10 a minute per visitor address), so a run right after another just takes longer.
    It must end with `ALL PASSED` (about 46 checks, including the booking flows).
 
 ## 2. Log in to the server and log out
