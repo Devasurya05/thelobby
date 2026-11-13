@@ -11,8 +11,8 @@
 
 @section('content')
     <section class="hero">
-        <h1>Pick your bed.<br>No clashes.</h1>
-        <p class="lead">Plan a group trip together. Everyone picks a bed in a live lobby, and tickets and passports go in a private vault that deletes itself when the trip ends.</p>
+        <h1>A shared space<br>for every group trip.</h1>
+        <p class="lead">Everyone sees the plan and claims their place. Tickets and passports go in a private vault that deletes itself when the trip ends.</p>
         <div class="actions">
             <a class="btn" href="#create">Create a trip</a>
             <a class="btn secondary" href="#join">Join with a code</a>
@@ -161,5 +161,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/home.js') }}"></script>
+    <script src="{{ \App\Support\Assets::url('js/home.js') }}"></script>
 @endpush

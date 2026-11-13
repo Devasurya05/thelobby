@@ -76,3 +76,5 @@ Standard Laravel 13 skeleton plus `scripts/start-mysql.ps1`. Models in `app/Mode
 - 2026-11-12 decision: "They will come from a booking" trips (`trips.awaiting_booking`) take their FIRST booking without an approval tap, because the organiser chose that; the page tells the organiser to keep the code private until then. Every later booking needs approval.
 - 2026-11-12 decision: a booking site can create a trip for a booking (one name, organiser logged in at once), but never a second trip for a booking that is already in a live trip.
 - 2026-11-12 decision: trip dates follow the booking that gave them (`trips.dates_booking_id`), but never move the end date into the past (the vault is emptied the day after the end date).
+
+- 2026-11-12 decision: the tagline changed from "Pick your bed. No clashes." to "A shared space for every group trip." because bed picking is one feature, not the product. Home page, default page title and description, and README updated. A short English and Japanese slide deck is kept locally in `presentation/` (listed in `.gitignore`, never committed).

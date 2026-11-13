@@ -235,3 +235,13 @@ User must commit and push `deploy/` (and this file) before the server can clone 
 ### 2026-11-12 (session 1: README)
 - Done: README.md written to replace the default Laravel text (what it does, architecture and data-model diagrams in Mermaid, how the hard parts work, security decisions table, run-it-locally steps, settings table, tests and checks, project layout, AWS deployment summary, demo script, known limitations, roadmap). Every technical claim was checked against the code, all links point to files that exist, and the file has no private wording, addresses or local paths. It deliberately has no live address: add one by hand if wanted.
 - Still to do: docs/STUDY_GUIDE.md (plain-language explanations of every concept and step, likely questions and answers; link it from the README when it exists), friends test from other networks, final HOLD_SECONDS decision, Saturday freeze, Sunday rehearsal, Monday smoke check.
+
+### 2026-11-12 (session 1: tagline and intro slides)
+- Done: tagline and home-page copy changed to "A shared space for every group trip." (files: `resources/views/home.blade.php`, `resources/views/layouts/app.blade.php`, `README.md`, plus `text-wrap: pretty` on the hero paragraph in `public/css/app.css`). 231 tests pass. Six-slide local deck built in `presentation/` (`TheLobby.pptx` and a PDF copy); the folder is in `.gitignore`.
+- NOT yet live: the copy change needs commit, push, then `bash /var/www/thelobby/deploy/release.sh` on the server (no migration this time).
+- Still to do: docs/STUDY_GUIDE.md, friends test from other networks, final HOLD_SECONDS decision, Saturday freeze, Sunday rehearsal, Monday smoke check.
+
+### 2026-11-13 (session 1: full-width layout, versioned assets)
+- Done: the page now uses the full screen width. The logo sits at the left edge and the menu at the right edge (side gap 20px on phones, growing to at most 40px; edit `clamp(20px, 2vw, 40px)` on `.wrap` in public/css/app.css to change it). Paragraphs and forms keep a narrower limit (`.measure`) so lines stay readable, and the bed grid now fits as many columns as the width allows. Checked at 1900, 1366, 1024, 768 and 375 pixels wide: no sideways scroll, logo and menu at the edges, menu collapses on phones.
+- Done: every stylesheet and script link now carries the file's last-changed time (`App\Support\Assets::url()`), so a release can never be hidden by a browser holding the old file. 3 new tests (234 pass), Pint clean.
+- NOT yet live: commit, push, `bash /var/www/thelobby/deploy/release.sh` on the server, then a hard refresh (Ctrl+Shift+R) once.

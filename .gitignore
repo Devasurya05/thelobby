@@ -39,3 +39,6 @@ Thumbs.db
 /storage/logs/*
 !/storage/logs/.gitignore
 /secrets/
+
+# Intro slides stay local
+/presentation/

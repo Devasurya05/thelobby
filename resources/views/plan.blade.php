@@ -223,5 +223,5 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('js/confirm.js') }}"></script>
+    <script src="{{ \App\Support\Assets::url('js/confirm.js') }}"></script>
 @endpush

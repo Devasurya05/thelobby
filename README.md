@@ -14,7 +14,7 @@ Open it on your phone or laptop. It is running right now on AWS.
 
 (The pages explain themselves as you go. The sections below explain how it is built.)
 
-**Pick your bed. No clashes.** A group-trip app where everyone chooses a bed in a live lobby, tickets and passports go in a private vault that deletes itself when the trip ends, and bookings from booking sites fill the trip in for you.
+**A shared space for every group trip.** Everyone sees the plan and claims their place in a live lobby, tickets and passports go in a private vault that deletes itself when the trip ends, and bookings from booking sites fill the trip in for you.
 
 Built with **PHP 8.4, Laravel 13, MySQL 8.4, Blade and jQuery**, and deployed on **AWS** (EC2, RDS, S3). It is deliberately backend-heavy: the interesting parts are concurrency, security and integrations, not screens.
 

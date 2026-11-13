@@ -35,7 +35,11 @@ body {
 }
 main { flex: 1; }
 
-.wrap { width: 100%; max-width: 56rem; margin: 0 auto; padding: 0 20px; }
+/* Full width: the logo sits at the left edge and the menu at the right edge, and the content uses the whole screen.
+   The side gap is small and grows a little on big screens (20px on a phone, up to 40px). To change it, edit the
+   clamp(...) numbers below. The very large cap only stops 4K monitors
+   from stretching things absurdly. Paragraphs and forms keep their own narrower limit (.measure) so lines stay readable. */
+.wrap { width: 100%; max-width: 120rem; margin: 0 auto; padding: 0 clamp(20px, 2vw, 40px); }
 .measure { max-width: 38rem; }
 
 a { color: var(--accent); text-underline-offset: 3px; }
@@ -182,7 +186,8 @@ input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent);
 
 /* ---- Home page ---- */
 .hero { padding: 56px 0 32px; }
-.hero .lead { font-size: 1.25rem; max-width: 34rem; color: var(--muted); }
+/* text-wrap: pretty stops a single word being left alone on the last line. */
+.hero .lead { font-size: 1.25rem; max-width: 34rem; color: var(--muted); text-wrap: pretty; }
 .steps { list-style: none; margin: 24px 0 0; padding: 0; counter-reset: step; }
 .steps li { counter-increment: step; display: grid; grid-template-columns: 3rem 1fr; gap: 0 8px; padding: 20px 0; border-top: 1px solid var(--line); }
 .steps li::before { content: counter(step); font: 500 2.2rem/1 var(--serif); color: var(--accent); }
@@ -216,9 +221,8 @@ input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent);
 
 .room { margin: 28px 0 0; }
 .room h2 { font-size: 1.35rem; margin-bottom: 10px; }
-.beds { display: grid; grid-template-columns: 1fr; gap: 10px; }
-@media (min-width: 30rem) { .beds { grid-template-columns: 1fr 1fr; } }
-@media (min-width: 52rem) { .beds { grid-template-columns: 1fr 1fr 1fr; } }
+/* As many columns as fit (a phone gets one or two, a wide screen gets many), so beds fill the width instead of leaving it empty. */
+.beds { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 10px; }
 
 .bed { padding: 14px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius); }
 .bed.taken { background: var(--paper); border-style: dashed; }

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {{-- CSRF token for AJAX calls (jQuery will send it in a header). --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@hasSection('title')@yield('title') | The Lobby @else The Lobby: pick your bed, no clashes @endif</title>
-    <meta name="description" content="@yield('description', 'Pick beds for a group trip without double bookings, and keep tickets and passports in a private vault that deletes itself when the trip ends.')">
+    <title>@hasSection('title')@yield('title') | The Lobby @else The Lobby: a shared space for every group trip @endif</title>
+    <meta name="description" content="@yield('description', 'A shared space for every group trip: see the plan, claim your place, and keep tickets and passports in a private vault that deletes itself when the trip ends.')">
     @stack('head')
     @include('partials.head')
 </head>
@@ -66,7 +66,7 @@
 
     @include('partials.footer')
 
-    <script src="{{ asset('js/menu.js') }}"></script>
+    <script src="{{ \App\Support\Assets::url('js/menu.js') }}"></script>
     @stack('scripts')
 </body>
 </html>
